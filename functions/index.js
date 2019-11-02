@@ -25,3 +25,4 @@ exports.getPosts = functions.https.onRequest((req, res) => {
 })
 
 
+//PIOTREK KURWA ZOBACZ TO PANI P NA GOLAJA
