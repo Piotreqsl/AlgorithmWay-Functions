@@ -25,4 +25,3 @@ exports.getPosts = functions.https.onRequest((req, res) => {
 })
 
 
-//// Jebać kurwe panią  P  
