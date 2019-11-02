@@ -23,3 +23,6 @@ exports.getPosts = functions.https.onRequest((req, res) => {
         })
         .catch((err) => console.error(err));
 })
+
+
+//// Jebać kurwe panią  P  
