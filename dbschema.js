@@ -7,8 +7,6 @@ let db = {
             likeCount: 5,
             commentCount: 2,
 
-
-
         }
 
     ]
