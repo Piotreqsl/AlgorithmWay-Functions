@@ -10,11 +10,17 @@ app.get("/Posts", (req, res) => {
   admin
     .firestore()
     .collection("Posts")
+    .orderBy("createdAt", "desc")
     .get()
     .then(data => {
       let posts = [];
       data.forEach(doc => {
-        posts.push(doc.data());
+        posts.push({
+          postId: doc.id,
+          Title: doc.data().Title,
+          Desc: doc.data().Desc,
+          createdAt: doc.data().createdAt
+        });
       });
       return res.json(posts);
     })
@@ -23,4 +29,24 @@ app.get("/Posts", (req, res) => {
 
 exports.api = functions.https.onRequest(app);
 
-//PIOTREK KURWA ZOBACZ TO PANI P NA GOLAJA
+app.post("/Posts", (req, res) => {
+  const newAlgorithm = {
+    Desc: req.body.Desc,
+    Title: req.body.Title,
+    createdAt: new Date().toISOString()
+  };
+
+  admin
+    .firestore()
+    .collection("Posts")
+    .add(newAlgorithm)
+    .then(doc => {
+      res.json({ message: `document ${doc.id} created successfully.` });
+    })
+    .catch(err => {
+      res.status(500).json({ error: "something went wrong" });
+      console.error(err);
+    });
+});
+
+exports.api = functions.https.onRequest(app);
