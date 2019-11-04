@@ -182,6 +182,12 @@ exports.uploadImage = (req, res) => {
         console.log(filename);
         console.log(mimetype);
 
+        if (mimetype !== 'image/jpeg' && mimetype !== 'image/png' && mimetype !== 'image/jpg') {
+            return res.status(400).json({
+                error: "Wrong file submitted"
+            });
+        }
+
         const imageExstension = filename.split('.')[filename.split(".").length - 1];
         imageFilename = `${Math.round(Math.random()*10000000)}.${imageExstension}`;
         const filepath = path.join(os.tmpdir(), imageFilename);
