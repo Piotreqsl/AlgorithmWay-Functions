@@ -82,6 +82,7 @@ exports.signup = (req, res) => {
             token = idToken;
             const userCredentials = {
                 /// Ustawianie objecta do user collections
+                type: "user",
                 handle: newUser.handle,
                 email: newUser.email,
                 createdAt: new Date().toISOString(),
@@ -232,4 +233,66 @@ exports.uploadImage = (req, res) => {
 
     });
     busboy.end(req.rawBody);
-};
+}
+
+exports.addUserDetails = (req, res) => {
+    let userDetails = {};
+    if (!isEmpty(req.body.bio.trim())) userDetails.bio = req.body.bio;
+
+
+    db.doc(`/users/${req.user.handle}`).update(userDetails)
+        .then(() => {
+            return res.json({
+                message: "Details added succesfully"
+            });
+        }).catch(err => {
+            console.error(err);
+            return res.status(500).json({
+                error: err.code
+            });
+        })
+
+
+
+}
+
+// Wszystkie user data na zalogowanego
+exports.getAuthenticatedUser = (req, res) => {
+    let userData = {};
+    db.doc(`/users/${req.user.handle}`).get()
+        .then(doc => {
+            if (doc.exists) {
+                userData.credentials = doc.data();
+                return db.collection("likes").where("userHandle", '==', req.user.handle).get();
+            }
+        })
+        .then(data => {
+            userData.likes = [];
+            data.forEach(doc => {
+                userData.likes.push(doc.data());
+            });
+            return res.json(userData);
+        })
+        .catch(err => {
+            console.error(err);
+            return res.status(500).json({
+                error: err.code
+            });
+        })
+}
+
+exports.getUserByName = (req, res) => {
+    let userData = {};
+    db.doc(`/users/${req.params.username}`).get()
+        .then(doc => {
+            if (!doc.exists) {
+                return res.status(400).json({
+                    error: "No user found"
+                });
+            }
+            userData = doc.data();
+            userData.handle = doc.id;
+            return res.json(userData);
+        })
+
+}

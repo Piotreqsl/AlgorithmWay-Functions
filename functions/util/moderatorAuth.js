@@ -27,6 +27,7 @@ module.exports = (req, res, next) => {
             return db
                 .collection("users")
                 .where("userId", "==", req.user.uid)
+                .where("type", "==", "moderator")
                 .limit(1)
                 .get();
         })
@@ -37,7 +38,7 @@ module.exports = (req, res, next) => {
             return next();
         })
         .catch(err => {
-            console.error("Error while veryfying token", err);
+            console.error("Error while veryfying token (not moderator)", err);
             return res.status(403).json(err);
         });
 };
