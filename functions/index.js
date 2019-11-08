@@ -1,6 +1,8 @@
 const functions = require("firebase-functions");
 
 
+
+
 const {
   getAllPosts,
   postOnePost,
@@ -14,11 +16,14 @@ const {
   uploadImage,
   addUserDetails,
   getAuthenticatedUser,
-  getUserByName
+  getUserByName,
+  cofirmEmail
 } = require('./handlers/users');
+
 
 const FBAuth = require('./util/FBAuth');
 const moderatorAuth = require('./util/moderatorAuth');
+const FBEmailAuth = require('./util/FBEmailAuth');
 
 const app = require("express")();
 
@@ -27,16 +32,19 @@ app.get("/posts", getAllPosts);
 //// Get logged user info (do reduxa)
 app.get('/user', FBAuth, getAuthenticatedUser);
 // Get post by id (w comments);
-app.get('/post/:postId', getPost);
+app.get('/posts/:postId', getPost);
 //Get user by username
 app.get('/users/:username', getUserByName);
-//// Add user bio, desc
+
+app.get('/confirm_email/:id', cofirmEmail);
 
 
 app.post('/post/:postId/comment', FBAuth, commentOnPost);
 
+
+//User Details
 app.post("/user", FBAuth, addUserDetails);
-app.post("/post", FBAuth, postOnePost);
+app.post("/post", postOnePost); // Fbauth dodac !!!!!
 app.post("/signup", signup);
 app.post("/login", login);
 /// Upload avatar

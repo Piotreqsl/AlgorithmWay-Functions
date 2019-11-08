@@ -57,6 +57,51 @@ exports.postOnePost = (req, res) => {
 }
 
 
+exports.postOnePostSecond = (req, res) => {
+
+    const BusBoy = require('busboy');
+    const path = require('path');
+    const os = require('os');
+    const fs = require('fs');
+
+
+    const busboy = new BusBoy({
+        headers: req.headers
+    });
+
+    busboy.on("")
+
+
+
+
+
+
+    const newAlgorithm = {
+        desc: req.body.desc,
+        shortDesc: req.body.shortDesc,
+        title: req.body.title,
+        userHandle: req.user.handle, /// tutaj na fbauth req.user.handle
+        java: req.body.java,
+        cpp: req.body.cpp,
+        python: req.body.python,
+        createdAt: new Date().toISOString()
+    };
+
+    db.collection("Posts")
+        .add(newAlgorithm)
+        .then(doc => {
+            res.json({
+                message: `document ${doc.id} created successfully.`
+            });
+        })
+        .catch(err => {
+            res.status(500).json({
+                error: "something went wrong"
+            });
+            console.error(err);
+        });
+}
+
 exports.getPost = (req, res) => {
     let postData = {};
     db.doc(`/Posts/${req.params.postId}`).get()

@@ -23,6 +23,11 @@ module.exports = (req, res, next) => {
         .verifyIdToken(idToken)
         .then(decodedToken => {
             req.user = decodedToken;
+            if (req.user.email_verified === false) {
+                return res.status(403).json({
+                    error: "Not verified email!"
+                });
+            };
 
             console.log(decodedToken);
             return db

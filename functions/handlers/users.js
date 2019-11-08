@@ -6,11 +6,42 @@ const {
 
 
 const config = require('../util/config');
+const nodemailer = require('nodemailer');
+
 
 
 
 const firebase = require('firebase');
 firebase.initializeApp(config);
+
+
+function sendVerificationLink(email, link) {
+    var smtpConfig = {
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // use SSL
+        auth: {
+            user: 'algorithmwayonion@gmail.com',
+            pass: 'onion12#'
+        }
+    };
+    var transporter = nodemailer.createTransport(smtpConfig);
+    var mailOptions = {
+        from: "algorithmwayonion@gmail.com", // sender address 
+        to: email, // list of receivers
+        subject: "Email verification AlgorithmWay", // Subject line
+        text: "Email verification, press here to verify your email: " + link,
+        html: "<b>Hello there,<br> click <a href=" + link + "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
+    };
+    transporter.sendMail(mailOptions, function (error, response) {
+        if (error) {
+            console.log(error);
+        } else {
+            console.log("Message sent: " + mailOptions.text);
+        }
+    });
+}
+
 
 
 exports.signup = (req, res) => {
@@ -67,7 +98,6 @@ exports.signup = (req, res) => {
                 });
             } else {
                 /// Dodanie użytkownika
-                console.log("user added")
 
                 return firebase
                     .auth()
@@ -75,7 +105,18 @@ exports.signup = (req, res) => {
             }
         }) // Zwracanie tokena
         .then(data => {
+
             userId = data.user.uid; // user id do user collections
+
+            const userIDHash = data.user.uid; /////// Setowanie maiala confirm
+            db.collection('Email-Verifications').doc(userIDHash).set({
+                userId: data.user.uid
+            }).then(() => {
+                console.log("Succes")
+            });
+            const verificationLink = `https://europe-west1-algorithmway-420.cloudfunctions.net/api/confirm_email/${userIDHash}`;
+            sendVerificationLink(newUser.email, verificationLink);
+
             return data.user.getIdToken();
         })
         .then(idToken => {
@@ -148,7 +189,7 @@ exports.login = (req, res) => {
         })
         .catch(err => {
             console.error(err);
-            if (err.code === "auth/wrong-password") {
+            if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
                 return res
                     .status(403)
                     .json({
@@ -162,6 +203,38 @@ exports.login = (req, res) => {
         });
 }
 
+exports.cofirmEmail = (req, res) => {
+    const id = req.params.id;
+    const hashRef = db.collection('Email-Verifications').doc(id);
+    hashRef.get().then(doc => {
+            if (!doc.exists) {
+                return res.status(403).json({
+                    error: "no such doc"
+                });
+            } else {
+
+                admin.auth().updateUser(doc.data()['userId'], {
+                        emailVerified: true
+                    })
+                    .then(function (userRecord) {
+                        console.log("Successfully updated user", userRecord.toJSON());
+                        db.collection('Email-Verifications').doc(id).delete();
+                        return res.status(200).json({
+                            succes: "Sucessfully verified"
+                        });
+                    })
+                    .catch(err => {
+                        console.log("error ", err);
+                        return res.status(500);
+                    });
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+            return response.status(500);
+        });
+
+};
 
 exports.uploadImage = (req, res) => {
     const BusBoy = require('busboy');
@@ -179,9 +252,7 @@ exports.uploadImage = (req, res) => {
     let imageToBeUploaded = {};
 
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
-        console.log(fieldname);
-        console.log(filename);
-        console.log(mimetype);
+
 
         if (mimetype !== 'image/jpeg' && mimetype !== 'image/png' && mimetype !== 'image/jpg') {
             return res.status(400).json({
