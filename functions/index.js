@@ -1,8 +1,6 @@
 const functions = require("firebase-functions");
 
 
-
-
 const {
   getAllPosts,
   postOnePost,

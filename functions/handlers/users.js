@@ -7,12 +7,16 @@ const {
 
 const config = require('../util/config');
 const nodemailer = require('nodemailer');
-
-
+const crypto = require('crypto');
 
 
 const firebase = require('firebase');
 firebase.initializeApp(config);
+
+///Encrypt user verification
+function md5(string) {
+    return crypto.createHash('md5').update(string).digest('hex');
+}
 
 
 function sendVerificationLink(email, link) {
@@ -108,7 +112,7 @@ exports.signup = (req, res) => {
 
             userId = data.user.uid; // user id do user collections
 
-            const userIDHash = data.user.uid; /////// Setowanie maiala confirm
+            const userIDHash = md5(data.user.uid); /////// Setowanie maiala confirm
             db.collection('Email-Verifications').doc(userIDHash).set({
                 userId: data.user.uid
             }).then(() => {
@@ -330,10 +334,12 @@ exports.addUserDetails = (req, res) => {
 // Wszystkie user data na zalogowanego
 exports.getAuthenticatedUser = (req, res) => {
     let userData = {};
+
     db.doc(`/users/${req.user.handle}`).get()
         .then(doc => {
             if (doc.exists) {
                 userData.credentials = doc.data();
+                userData.credentials.isEmailVerified = req.user.email_verified;
                 return db.collection("likes").where("userHandle", '==', req.user.handle).get();
             }
         })
@@ -341,6 +347,14 @@ exports.getAuthenticatedUser = (req, res) => {
             userData.likes = [];
             data.forEach(doc => {
                 userData.likes.push(doc.data());
+            });
+            return db.collection("favourites").where("userHandle", '==', req.user.handle).get();
+
+        })
+        .then(data => {
+            userData.favourites = [];
+            data.forEach(doc => {
+                userData.favourites.push(doc.data());
             });
             return res.json(userData);
         })
