@@ -1,11 +1,18 @@
 const functions = require("firebase-functions");
 
+/// Todo: save post (similar to like but stored in redux!!), image upload to post(with busboy returning imageUrl!!)
+
 
 const {
   getAllPosts,
   postOnePost,
   getPost,
-  commentOnPost
+  commentOnPost,
+  likePost,
+  unlikePost,
+  uploadPostImage,
+  deletePostImage
+
 } = require('./handlers/posts');
 
 const {
@@ -34,15 +41,20 @@ app.get('/posts/:postId', getPost);
 //Get user by username
 app.get('/users/:username', getUserByName);
 
+app.get('/post/:postId/like', FBEmailAuth, likePost);
+app.get('/post/:postId/unlike', FBEmailAuth, unlikePost);
+
 app.get('/confirm_email/:id', cofirmEmail);
 
 
+app.post('/post/uploadImage', FBEmailAuth, uploadPostImage);
+app.post('/post/deleteImage/:filename', FBEmailAuth, deletePostImage);
+
+
 app.post('/post/:postId/comment', FBAuth, commentOnPost);
-
-
 //User Details
 app.post("/user", FBAuth, addUserDetails);
-app.post("/post", postOnePost); // Fbauth dodac !!!!!
+app.post("/post", FBEmailAuth, postOnePost); // Fbauth dodac !!!!!
 app.post("/signup", signup);
 app.post("/login", login);
 /// Upload avatar
