@@ -84,7 +84,11 @@ exports.signup = (req, res) => {
         errors.confirmPassword = "Passwords must match";
     if (isEmpty(newUser.handle)) errors.handle = "Must not be empty";
 
-    if (Object.keys(errors).length > 0) return res.status(400).json(errors);
+
+
+
+
+
 
 
     const noImg = 'no-img.png';
@@ -97,9 +101,10 @@ exports.signup = (req, res) => {
         .then(doc => {
             if (doc.exists) {
                 // o tu sie sprawdza
-                return res.status(400).json({
-                    handle: "this handle is already taken"
-                });
+                errors.handle = "this handle is already taken";
+                if (Object.keys(errors).length > 0) return res.status(400).json(errors);
+
+
             } else {
                 /// Dodanie użytkownika
 
