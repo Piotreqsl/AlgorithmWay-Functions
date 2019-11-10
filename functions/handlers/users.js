@@ -88,9 +88,6 @@ exports.signup = (req, res) => {
 
 
 
-
-
-
     const noImg = 'no-img.png';
 
 
@@ -102,7 +99,6 @@ exports.signup = (req, res) => {
             if (doc.exists) {
                 // o tu sie sprawdza
                 errors.handle = "this handle is already taken";
-                if (Object.keys(errors).length > 0) return res.status(400).json(errors);
 
 
             } else {
@@ -112,6 +108,8 @@ exports.signup = (req, res) => {
                     .auth()
                     .createUserWithEmailAndPassword(newUser.email, newUser.password);
             }
+
+            if (Object.keys(errors).length > 0) return res.status(400).json(errors);
         }) // Zwracanie tokena
         .then(data => {
 
@@ -150,9 +148,8 @@ exports.signup = (req, res) => {
         .catch(err => {
             console.error(err);
             if (err.code === "auth/email-already-in-use") {
-                return res.status(400).json({
-                    email: "Email is already in use"
-                });
+                errors.emailUse = "Email is already in use"
+                return res.json(errors);
             } else {
                 /// inny błąd
                 return res.status(500).json({
