@@ -71,10 +71,15 @@ exports.signup = async (req, res) => {
   let errors = {};
 
   if (isEmpty(newUser.email)) {
-    errors.email = "Email must not be empty.";
+    errors.email = "Email must not be empty";
   } else if (!isEmail(newUser.email)) {
-    errors.email = "Must be a valid email adress.";
+    errors.email = "Must be a valid email adress";
   }
+
+  if(newUser.password.length < 8) errors.password = "This password is too short"
+  if(newUser.password.length > 25) errors.password = "This password is too long"
+  if(newUser.handle.length > 25) errors.handle = "This nickname is too long"
+  if(newUser.handle.length <= 0) errors.handle = "This nickname is too short"
 
   if (isEmpty(newUser.password)) errors.password = "Password must not be empty";
   if (newUser.password !== newUser.confirmPassword)
@@ -84,7 +89,7 @@ exports.signup = async (req, res) => {
   var docRef = db.collection("users").doc(newUser.handle);
   await docRef.get().then(doc => {
     if (doc.exists) {
-      errors.handle = "username taken";
+      errors.handle = "This username is already taken";
     } else {
       console.log("free");
     }
