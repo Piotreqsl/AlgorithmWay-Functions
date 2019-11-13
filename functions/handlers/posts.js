@@ -143,6 +143,8 @@ exports.getPost = (req, res) => {
             data.forEach(doc => {
                 postData.comments.push(doc.data())
             });
+
+            postData.numberOfCommnets = postData.comments.length;
             return res.json(postData);
         })
         .catch(err => {
@@ -238,11 +240,6 @@ exports.deletePostImage = (req, res) => {
     }
 
 }
-
-
-
-
-
 
 
 exports.commentOnPost = (req, res) => {
