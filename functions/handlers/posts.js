@@ -15,14 +15,15 @@ exports.getAllPosts = (req, res) => {
                 posts.push({
                     postId: doc.id,
                     title: doc.data().title,
-
                     shortDesc: doc.data().shortDesc,
                     java: doc.data().java,
                     cpp: doc.data().cpp,
                     python: doc.data().python,
                     userHandle: doc.data().userHandle,
                     createdAt: doc.data().createdAt,
-                    likeCount: doc.data().likeCount
+                    likeCount: doc.data().likeCount,
+                    commentCount: doc.data().commentCount,
+                    userImage: doc.data().userImage
                 });
             });
             return res.json(posts);
@@ -244,7 +245,7 @@ exports.deletePostImage = (req, res) => {
 
 exports.commentOnPost = (req, res) => {
     if (req.body.body.trim() === '') return res.status(400).json({
-        error: "Must not be empty"
+        comment: "Must not be empty"
     });
 
     const newComment = {
@@ -262,8 +263,13 @@ exports.commentOnPost = (req, res) => {
                     error: "Post not found"
                 });
             }
-            return db.collection('comments').add(newComment);
+            return doc.ref.update({
+                commentCount: doc.data().commentCount + 1
+            });
 
+        })
+        .then(() => {
+            return db.collection('comments').add(newComment);
         })
         .then(() => {
             res.json(newComment);
@@ -275,6 +281,7 @@ exports.commentOnPost = (req, res) => {
             });
         })
 }
+
 
 exports.likePost = (req, res) => {
     const likeDocument = db.collection('likes').where('userHandle', '==', req.user.handle)
@@ -324,6 +331,7 @@ exports.likePost = (req, res) => {
 
 }
 
+
 exports.unlikePost = (req, res) => {
     const likeDocument = db.collection('likes').where('userHandle', '==', req.user.handle)
         .where('postId', "==", req.params.postId).limit(1);
@@ -371,4 +379,37 @@ exports.unlikePost = (req, res) => {
             });
         })
 
+}
+
+
+exports.deletePost = (req, res) => {
+    const document = db.doc(`/Posts/${req.params.postId}`);
+    document.get().then(doc => {
+            if (!doc.exists) {
+                return res.status(404).json({
+                    error: "Post not found"
+                });
+            }
+            if (doc.data().userHandle !== req.user.handle || req.user.admin !== false) {
+                return res.status(403).json({
+                    error: 'Unauthorized'
+                });
+            } else {
+                return document.delete();
+            }
+
+
+        })
+        .then(() => {
+            res.json({
+                message: 'Post deleted successfully'
+            })
+
+        })
+        .catch(err => {
+            console.error(err);
+            return res.status(500).json({
+                error: err.code
+            });
+        })
 }
