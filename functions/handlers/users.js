@@ -18,6 +18,9 @@ function md5(string) {
     .digest("hex");
 }
 
+
+
+
 function sendVerificationLink(email, link) {
   var smtpConfig = {
     host: "smtp.gmail.com",
@@ -156,6 +159,7 @@ exports.signup = async (req, res) => {
         const userCredentials = {
           /// Ustawianie objecta do user collections
           handle: newUser.handle,
+          reputation: 0,
           email: newUser.email,
           createdAt: new Date().toISOString(),
           imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImg}?alt=media`,

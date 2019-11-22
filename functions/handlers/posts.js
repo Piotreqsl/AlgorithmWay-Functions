@@ -289,6 +289,7 @@ exports.likePost = (req, res) => {
     const postDocument = db.doc(`/Posts/${req.params.postId}`);
 
     let postData;
+    let UserData;
 
     postDocument.get().then(doc => {
             if (doc.exists) {
@@ -314,8 +315,21 @@ exports.likePost = (req, res) => {
                         });
                     })
                     .then(() => {
+                        return db.doc(`/users/${postData.userHandle}`).get().then((userDoc) => {
+                            if (userDoc.exists) {
+                                UserData = userDoc.data();
+                                UserData.reputation++;
+                                return db.doc(`/users/${postData.userHandle}`).update({
+                                    reputation: UserData.reputation
+                                })
+                            } else console.log("User not found, reputation remains")
+                        })
+                    })
+
+                    .then(() => {
                         return res.json(postData);
                     })
+
             } else {
                 return res.status(400).json({
                     error: "Post already liked"
@@ -365,6 +379,19 @@ exports.unlikePost = (req, res) => {
                         });
 
                     })
+
+                    .then(() => {
+                        return db.doc(`/users/${postData.userHandle}`).get().then((userDoc) => {
+                            if (userDoc.exists) {
+                                UserData = userDoc.data();
+                                UserData.reputation--;
+                                return db.doc(`/users/${postData.userHandle}`).update({
+                                    reputation: UserData.reputation
+                                })
+                            } else console.log("User not found, reputation remains")
+                        })
+                    })
+
                     .then(() => {
                         res.json({
                             postData

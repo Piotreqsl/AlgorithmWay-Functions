@@ -7,6 +7,7 @@ const {
 /// Todo: save post (similar to like but stored in redux!!)
 /// Edit requests!
 /// Admin functions!
+/// On image change do commentsów i pewno do edit requestów
 
 
 const {
