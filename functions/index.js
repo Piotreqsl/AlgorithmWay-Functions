@@ -4,12 +4,13 @@ const {
   db,
   admin
 } = require("./util/admin");
-/// Todo: save post (similar to like but stored in redux!!)
+
 /// Edit requests!
 /// Admin functions!
-/// On image change do commentsów i pewno do edit requestów
+// On image change do post requests
 
-//Done: reputation
+//Done: reputation, save posts
+
 
 const {
   getAllPosts,
@@ -75,7 +76,17 @@ app.post("/notifications", FBAuth, markNotificationsRead);
 
 exports.api = functions.region("europe-west1").https.onRequest(app);
 
-exports.createNotificationOnLike = functions
+
+
+
+
+
+
+
+
+
+
+exports.OnLikeCreate = functions
   .region("europe-west1")
   .firestore.document("likes/{id}")
   .onCreate(snapshot => {
@@ -88,19 +99,40 @@ exports.createNotificationOnLike = functions
           doc.data().userHandle !== snapshot.data().userHandle
         ) {
           return db.doc(`/notifications/${snapshot.id}`).set({
-            createdAt: new Date().toISOString(),
-            recipient: doc.data().userHandle,
-            sender: snapshot.data().userHandle,
-            type: "like",
-            read: false,
-            postId: doc.id,
-            title: doc.data().title
-          });
+              createdAt: new Date().toISOString(),
+              recipient: doc.data().userHandle,
+              sender: snapshot.data().userHandle,
+              type: "like",
+              read: false,
+              postId: doc.id,
+              title: doc.data().title
+            })
+            .then(() => {
+              let posterData;
+              console.log("Wykonano first")
+
+              return db.doc(`/users/${doc.data().userHandle}`).get().then(userDoc => {
+                posterData = userDoc.data()
+                posterData.reputation++;
+                console.log("repputacja niby up")
+                return db.doc(`/users/${doc.data().userHandle}`).update({
+                  reputation: posterData.reputation
+                });
+
+
+              })
+
+            })
         }
+
+
       })
       .catch(err => {
         console.error(err);
-      });
+      })
+
+
+
   });
 
 exports.deleteNotificationOnUnlike = functions
@@ -110,6 +142,32 @@ exports.deleteNotificationOnUnlike = functions
     return db
       .doc(`/notifications/${snapshot.id}`)
       .delete()
+
+
+
+      .then(() => {
+        return db
+          .doc(`/Posts/${snapshot.data().postId}`)
+          .get()
+          .then(doc => {
+            let posterData;
+
+
+            return db.doc(`/users/${doc.data().userHandle}`).get().then(userDoc => {
+              posterData = userDoc.data()
+              posterData.reputation--;
+              console.log("repputacja niby up")
+              return db.doc(`/users/${doc.data().userHandle}`).update({
+                reputation: posterData.reputation
+              });
+            })
+          })
+
+
+      })
+
+
+
 
       .catch(err => {
         console.error(err);
@@ -149,8 +207,7 @@ exports.onUserImageChange = functions
   .region("europe-west1")
   .firestore.document("/users/{userId}")
   .onUpdate(change => {
-    console.log(change.before.data());
-    console.log(change.after.data());
+
     if (change.before.data().imageUrl !== change.after.data().imageUrl) {
       console.log("Image has changed");
       let batch = db.batch();

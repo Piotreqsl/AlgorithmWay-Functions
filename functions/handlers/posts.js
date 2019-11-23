@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 const config = require("../util/config");
 
 exports.getAllPosts = (req, res) => {
@@ -179,9 +182,9 @@ exports.uploadPostImage = (req, res) => {
 exports.deletePostImage = (req, res) => {
   if (
     admin
-      .storage()
-      .bucket()
-      .file(req.params.filename).exists
+    .storage()
+    .bucket()
+    .file(req.params.filename).exists
   ) {
     admin
       .storage()
@@ -258,7 +261,9 @@ exports.addFav = (req, res) => {
         postData.postId = doc.id;
         return favDocument.get();
       } else {
-        return res.status(404).json({ error: "Post not found " });
+        return res.status(404).json({
+          error: "Post not found "
+        });
       }
     })
     .then(data => {
@@ -275,7 +280,9 @@ exports.addFav = (req, res) => {
       } else {
         return res
           .status(400)
-          .json({ error: "Post already added to favourites" });
+          .json({
+            error: "Post already added to favourites"
+          });
       }
     })
     .catch(err => {
@@ -303,20 +310,26 @@ exports.removeFav = (req, res) => {
         postData.postId = doc.id;
         return favDocument.get();
       } else {
-        return res.status(404).json({ error: "Post not found " });
+        return res.status(404).json({
+          error: "Post not found "
+        });
       }
     })
     .then(data => {
       if (data.empty) {
         return res
           .status(404)
-          .json({ error: "Post is not added to favourites " });
+          .json({
+            error: "Post is not added to favourites "
+          });
       } else {
         return db
           .doc(`/favourites/${data.docs[0].id}`)
           .delete()
           .then(() => {
-            return res.json({ success: "Post removed from favourites" });
+            return res.json({
+              success: "Post removed from favourites"
+            });
           });
       }
     })
@@ -366,20 +379,22 @@ exports.likePost = (req, res) => {
               likeCount: postData.likeCount
             });
           })
-          .then(() => {
-            return db
-              .doc(`/users/${postData.userHandle}`)
-              .get()
-              .then(userDoc => {
-                if (userDoc.exists) {
-                  UserData = userDoc.data();
-                  UserData.reputation++;
-                  return db.doc(`/users/${postData.userHandle}`).update({
-                    reputation: UserData.reputation
-                  });
-                } else console.log("User not found, reputation remains");
-              });
-          })
+
+          // Tu można rep
+          //.then(() => {
+          // return db
+          //  .doc(`/users/${postData.userHandle}`)
+          //  .get()
+          // .then(userDoc => {
+          //   if (userDoc.exists) {
+          //    UserData = userDoc.data();
+          //   UserData.reputation++;
+          //    return db.doc(`/users/${postData.userHandle}`).update({
+          //     reputation: UserData.reputation
+          //    });
+          //  } else console.log("User not found, reputation remains");
+          //  });
+          //  })
 
           .then(() => {
             return res.json(postData);
@@ -437,20 +452,21 @@ exports.unlikePost = (req, res) => {
             });
           })
 
-          .then(() => {
-            return db
-              .doc(`/users/${postData.userHandle}`)
-              .get()
-              .then(userDoc => {
-                if (userDoc.exists) {
-                  UserData = userDoc.data();
-                  UserData.reputation--;
-                  return db.doc(`/users/${postData.userHandle}`).update({
-                    reputation: UserData.reputation
-                  });
-                } else console.log("User not found, reputation remains");
-              });
-          })
+          /// Tu można ew rep
+          // .then(() => {
+          // return db
+          // .doc(`/users/${postData.userHandle}`)
+          //.get()
+          //.then(userDoc => {
+          //if (userDoc.exists) {
+          //UserData = userDoc.data();
+          //UserData.reputation--;
+          //return db.doc(`/users/${postData.userHandle}`).update({
+          // reputation: UserData.reputation
+          //});
+          // } else console.log("User not found, reputation remains");
+          //});
+          //})
 
           .then(() => {
             res.json({
