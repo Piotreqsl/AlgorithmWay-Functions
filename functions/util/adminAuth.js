@@ -23,7 +23,7 @@ module.exports = (req, res, next) => {
         .verifyIdToken(idToken)
         .then(decodedToken => {
             req.user = decodedToken;
-            if (req.user.admin === true) {
+            if (req.user.admin === false) {
                 return res.status(403).json({
                     error: "Admin privileges required!"
                 });

@@ -30,6 +30,8 @@ exports.getAllPosts = (req, res) => {
     .catch(err => console.error(err));
 };
 
+
+
 exports.postOnePost = (req, res) => {
   const newAlgorithm = {
     desc: req.body.desc,
@@ -42,6 +44,7 @@ exports.postOnePost = (req, res) => {
     userImage: req.user.imageUrl,
     likeCount: 0,
     commentCount: 0,
+    verifed: false,
 
     image1: {
       url: req.body.url1,

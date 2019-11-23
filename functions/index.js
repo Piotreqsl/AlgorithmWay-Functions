@@ -13,6 +13,11 @@ const {
 
 
 const {
+  verifyPost,
+  addAdminPrivileges
+} = require("./handlers/adminFunctions");
+
+const {
   getAllPosts,
   postOnePost,
   getPost,
@@ -24,6 +29,7 @@ const {
   deletePost,
   addFav,
   removeFav
+
 } = require("./handlers/posts");
 
 const {
@@ -42,6 +48,10 @@ const adminAuth = require("./util/adminAuth");
 const FBEmailAuth = require("./util/FBEmailAuth");
 
 const app = require("express")();
+
+
+app.post("/admin/:postId/verify", adminAuth, verifyPost);
+app.post("/admin/add", adminAuth, addAdminPrivileges);
 
 /// Post routes
 app.get("/posts", getAllPosts);
@@ -73,6 +83,9 @@ app.post("/login", login);
 /// Upload avatar
 app.post("/user/image", FBAuth, uploadImage);
 app.post("/notifications", FBAuth, markNotificationsRead);
+
+app.post("/admin/:postId/verify", adminAuth, verifyPost);
+
 
 exports.api = functions.region("europe-west1").https.onRequest(app);
 
