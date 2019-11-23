@@ -1,6 +1,9 @@
 const functions = require("firebase-functions");
 
-const { db, admin } = require("./util/admin");
+const {
+  db,
+  admin
+} = require("./util/admin");
 /// Todo: save post (similar to like but stored in redux!!)
 /// Edit requests!
 /// Admin functions!
@@ -161,9 +164,21 @@ exports.onUserImageChange = functions
             batch.update(post, {
               userImage: change.after.data().imageUrl
             });
-          });
-          return batch.commit();
-        });
+          })
+        }).then(() => {
+          return db.collection("comments").where("userHandle", "==", change.before.data().handle).get()
+            .then(data => {
+              data.forEach(doc => {
+                const comment = db.doc(`/comments/${doc.id}`);
+                batch.update(comment, {
+                  userImage: change.after.data().imageUrl
+                })
+              })
+
+              return batch.commit();
+
+            })
+        })
     } else {
       return true;
     }
