@@ -10,7 +10,6 @@ const {
 
 //Done: reputation, save posts, admin fucntions
 
-
 const {
   verifyPost,
   addAdminPrivileges
@@ -27,8 +26,8 @@ const {
   deletePostImage,
   deletePost,
   addFav,
-  removeFav
-
+  removeFav,
+  createEditRequest
 } = require("./handlers/posts");
 
 const {
@@ -48,57 +47,41 @@ const FBEmailAuth = require("./util/FBEmailAuth");
 
 const app = require("express")();
 
-
 app.post("/admin/:postId/verify", adminAuth, verifyPost);
 app.post("/admin/add", adminAuth, addAdminPrivileges);
 
+
 /// Post routes
 app.get("/posts", getAllPosts);
-//// Get logged user info (do reduxa)
-app.get("/user", FBAuth, getAuthenticatedUser);
-// Get post by id (w comments);
 app.get("/posts/:postId", getPost);
-//Get user by username
-app.get("/users/:username", getUserByName);
-
+app.post("/post", FBEmailAuth, postOnePost);
 app.get("/post/:postId/like", FBEmailAuth, likePost);
 app.get("/post/:postId/unlike", FBEmailAuth, unlikePost);
 app.get("/post/:postId/addFav", FBAuth, addFav);
 app.get("/post/:postId/removeFav", FBAuth, removeFav);
+app.post("/post/:postId/createEditRequest", FBEmailAuth, createEditRequest);
 
-app.get("/confirm_email/:id", cofirmEmail);
+
 
 app.post("/post/uploadImage", FBEmailAuth, uploadPostImage);
 app.post("/post/deleteImage/:filename", FBEmailAuth, deletePostImage);
-
 app.post("/posts/delete/:postId", FBEmailAuth, deletePost);
-
 app.post("/post/:postId/comment", FBAuth, commentOnPost);
-//User Details
+
+
+app.get("/user", FBAuth, getAuthenticatedUser);
 app.post("/user", FBAuth, addUserDetails);
-app.post("/post", FBEmailAuth, postOnePost); // Fbauth dodac !!!!!
+app.get("/users/:username", getUserByName);
+app.get("/confirm_email/:id", cofirmEmail);
 app.post("/signup", signup);
 app.post("/login", login);
-/// Upload avatar
 app.post("/user/image", FBAuth, uploadImage);
 app.post("/notifications", FBAuth, markNotificationsRead);
-
-app.post("/admin/:postId/verify", adminAuth, verifyPost);
 
 
 exports.api = functions.region("europe-west1").https.onRequest(app);
 
-
-
-
-
-
-
-
-
-
-
-exports.OnLikeCreate = functions
+exports.OnLike = functions
   .region("europe-west1")
   .firestore.document("likes/{id}")
   .onCreate(snapshot => {
@@ -110,7 +93,9 @@ exports.OnLikeCreate = functions
           doc.exists &&
           doc.data().userHandle !== snapshot.data().userHandle
         ) {
-          return db.doc(`/notifications/${snapshot.id}`).set({
+          return db
+            .doc(`/notifications/${snapshot.id}`)
+            .set({
               createdAt: new Date().toISOString(),
               recipient: doc.data().userHandle,
               sender: snapshot.data().userHandle,
@@ -121,41 +106,33 @@ exports.OnLikeCreate = functions
             })
             .then(() => {
               let posterData;
-              console.log("Wykonano first")
 
-              return db.doc(`/users/${doc.data().userHandle}`).get().then(userDoc => {
-                posterData = userDoc.data()
-                posterData.reputation++;
-                console.log("repputacja niby up")
-                return db.doc(`/users/${doc.data().userHandle}`).update({
-                  reputation: posterData.reputation
+              return db
+                .doc(`/users/${doc.data().userHandle}`)
+                .get()
+                .then(userDoc => {
+                  posterData = userDoc.data();
+                  posterData.reputation++;
+
+                  return db.doc(`/users/${doc.data().userHandle}`).update({
+                    reputation: posterData.reputation
+                  });
                 });
-
-
-              })
-
-            })
+            });
         }
-
-
       })
       .catch(err => {
         console.error(err);
-      })
-
-
-
+      });
   });
 
-exports.deleteNotificationOnUnlike = functions
+exports.onUnlike = functions
   .region("europe-west1")
   .firestore.document("likes/{id}")
   .onDelete(snapshot => {
     return db
       .doc(`/notifications/${snapshot.id}`)
       .delete()
-
-
 
       .then(() => {
         return db
@@ -164,22 +141,19 @@ exports.deleteNotificationOnUnlike = functions
           .then(doc => {
             let posterData;
 
+            return db
+              .doc(`/users/${doc.data().userHandle}`)
+              .get()
+              .then(userDoc => {
+                posterData = userDoc.data();
+                posterData.reputation--;
 
-            return db.doc(`/users/${doc.data().userHandle}`).get().then(userDoc => {
-              posterData = userDoc.data()
-              posterData.reputation--;
-              console.log("repputacja niby up")
-              return db.doc(`/users/${doc.data().userHandle}`).update({
-                reputation: posterData.reputation
+                return db.doc(`/users/${doc.data().userHandle}`).update({
+                  reputation: posterData.reputation
+                });
               });
-            })
-          })
-
-
+          });
       })
-
-
-
 
       .catch(err => {
         console.error(err);
@@ -219,7 +193,6 @@ exports.onUserImageChange = functions
   .region("europe-west1")
   .firestore.document("/users/{userId}")
   .onUpdate(change => {
-
     if (change.before.data().imageUrl !== change.after.data().imageUrl) {
       console.log("Image has changed");
       let batch = db.batch();
@@ -233,21 +206,24 @@ exports.onUserImageChange = functions
             batch.update(post, {
               userImage: change.after.data().imageUrl
             });
-          })
-        }).then(() => {
-          return db.collection("comments").where("userHandle", "==", change.before.data().handle).get()
+          });
+        })
+        .then(() => {
+          return db
+            .collection("comments")
+            .where("userHandle", "==", change.before.data().handle)
+            .get()
             .then(data => {
               data.forEach(doc => {
                 const comment = db.doc(`/comments/${doc.id}`);
                 batch.update(comment, {
                   userImage: change.after.data().imageUrl
-                })
-              })
+                });
+              });
 
               return batch.commit();
-
-            })
-        })
+            });
+        });
     } else {
       return true;
     }
@@ -294,6 +270,15 @@ exports.onPostDelete = functions
         data.forEach(doc => {
           batch.delete(db.doc(`/favourites/${doc.id}`));
         });
+
+        return db
+          .collection("edit-requests")
+          .where("originalPostId", "==", postId)
+          .get();
+      }).then(data => {
+        data.forEach(doc => {
+          batch.delete(db.doc(`/edit-requests/${doc.id}`));
+        })
         return batch.commit();
       })
       .catch(err => {

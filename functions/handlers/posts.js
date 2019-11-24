@@ -30,37 +30,46 @@ exports.getAllPosts = (req, res) => {
     .catch(err => console.error(err));
 };
 
-
-
 exports.postOnePost = (req, res) => {
+
+  const isEmpty = string => {
+    if (string === null || typeof string === "undefined" || string.length === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  };
   const newAlgorithm = {
     desc: req.body.desc,
     shortDesc: req.body.shortDesc,
     title: req.body.title,
-    userHandle: req.user.handle, /// tutaj na fbauth req.user.handle
-    java: req.body.java,
-    cpp: req.body.cpp,
-    python: req.body.python,
+    userHandle: req.user.handle,
     userImage: req.user.imageUrl,
     likeCount: 0,
     commentCount: 0,
     verifed: false,
 
-    image1: {
-      url: req.body.url1,
-      filename: req.body.filename1
-    },
-    image2: {
-      url: req.body.url2,
-      filename: req.body.filename2
-    },
-    image3: {
-      url: req.body.url3,
-      filename: req.body.filename3
-    },
+    image1: {},
+    image2: {},
+    image3: {},
 
     createdAt: new Date().toISOString()
   };
+
+  if (!isEmpty(req.body.java)) newAlgorithm.java = req.body.java;
+  if (!isEmpty(req.body.cpp)) newAlgorithm.cpp = req.body.cpp;
+  if (!isEmpty(req.body.python)) newAlgorithm.python = req.body.python;
+
+  if (!isEmpty(req.body.url1)) newAlgorithm.image1.url = req.body.url1;
+  if (!isEmpty(req.body.filename1)) newAlgorithm.image1.filename = req.body.filename1;
+
+  if (!isEmpty(req.body.url2)) newAlgorithm.image2.url = req.body.url2;
+  if (!isEmpty(req.body.filename2)) newAlgorithm.image2.filename = req.body.filename2;
+
+  if (!isEmpty(req.body.url3)) newAlgorithm.image3.url = req.body.url3;
+  if (!isEmpty(req.body.filename3)) newAlgorithm.image3.filename = req.body.filename3;
+
+
 
   db.collection("Posts")
     .add(newAlgorithm)
@@ -519,3 +528,71 @@ exports.deletePost = (req, res) => {
       });
     });
 };
+
+exports.createEditRequest = (req, res) => {
+
+  const isEmpty = string => {
+    if (string === null || typeof string === "undefined" || string.length === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+
+  const newAlgorithm = {
+    desc: req.body.desc,
+    shortDesc: req.body.shortDesc,
+    title: req.body.title,
+    userHandle: req.user.handle,
+    originalPostId: req.params.postId,
+
+    image1: {},
+    image2: {},
+    image3: {},
+
+    createdAt: new Date().toISOString()
+  };
+
+  if (!isEmpty(req.body.java)) newAlgorithm.java = req.body.java;
+  if (!isEmpty(req.body.cpp)) newAlgorithm.cpp = req.body.cpp;
+  if (!isEmpty(req.body.python)) newAlgorithm.python = req.body.python;
+
+  if (!isEmpty(req.body.url1)) newAlgorithm.image1.url = req.body.url1;
+  if (!isEmpty(req.body.filename1)) newAlgorithm.image1.filename = req.body.filename1;
+
+  if (!isEmpty(req.body.url2)) newAlgorithm.image2.url = req.body.url2;
+  if (!isEmpty(req.body.filename2)) newAlgorithm.image2.filename = req.body.filename2;
+
+  if (!isEmpty(req.body.url3)) newAlgorithm.image3.url = req.body.url3;
+  if (!isEmpty(req.body.filename3)) newAlgorithm.image3.filename = req.body.filename3;
+
+  // Koniec getowania postów
+
+
+  const originalPost = db.doc(`/Posts/${req.params.postId}`);
+
+  originalPost.get().then(doc => {
+
+    if (!doc.exists) {
+      return res.status(404).json({
+        error: "Post doesnt exist"
+      });
+    }
+
+    return db.collection('edit-requests').add(newAlgorithm);
+  }).then(doc => {
+    const resPost = newAlgorithm;
+    resPost.postId = doc.id;
+    res.json({
+      resPost
+    });
+  }).catch(err => {
+    res.status(500).json({
+      error: "something went wrong"
+    });
+    console.error(err);
+  });
+
+
+}

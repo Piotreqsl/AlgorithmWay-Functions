@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
@@ -31,12 +34,11 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification AlgorithmWay", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html:
-      "<b>Hello there,<br> click <a href=" +
+    html: "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function(error, response) {
+  transporter.sendMail(mailOptions, function (error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -61,7 +63,7 @@ exports.signup = async (req, res) => {
   };
 
   const isEmpty = string => {
-    if (string.trim() === "") {
+    if (string === null || typeof string === "undefined" || string.trim() === "") {
       return true;
     } else {
       return false;
@@ -198,7 +200,7 @@ exports.login = (req, res) => {
   let errors = {};
 
   const isEmpty = string => {
-    if (string.trim() === "") {
+    if (string === null || typeof string === "undefined" || string.trim() === "") {
       return true;
     } else {
       return false;
@@ -263,7 +265,7 @@ exports.cofirmEmail = (req, res) => {
           .updateUser(doc.data()["userId"], {
             emailVerified: true
           })
-          .then(function(userRecord) {
+          .then(function (userRecord) {
             console.log("Successfully updated user", userRecord.toJSON());
             db.collection("Email-Verifications")
               .doc(id)
@@ -356,10 +358,17 @@ exports.uploadImage = (req, res) => {
 };
 
 exports.addUserDetails = (req, res) => {
+  const isEmpty = string => {
+    if (string === null || typeof string === "undefined" || string.trim() === "") {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
   let userDetails = {};
   if (!isEmpty(req.body.bio.trim())) userDetails.bio = req.body.bio;
-  if (!isEmpty(req.body.location.trim()))
-    userDetails.location = req.body.location;
+  if (!isEmpty(req.body.location.trim())) userDetails.location = req.body.location;
 
   db.doc(`/users/${req.user.handle}`)
     .update(userDetails)
