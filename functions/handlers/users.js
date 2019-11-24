@@ -1,7 +1,4 @@
-const {
-  db,
-  admin
-} = require("../util/admin");
+const { db, admin } = require("../util/admin");
 
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
@@ -17,9 +14,6 @@ function md5(string) {
     .update(string)
     .digest("hex");
 }
-
-
-
 
 function sendVerificationLink(email, link) {
   var smtpConfig = {
@@ -37,11 +31,12 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification AlgorithmWay", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html: "<b>Hello there,<br> click <a href=" +
+    html:
+      "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function (error, response) {
+  transporter.sendMail(mailOptions, function(error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -171,7 +166,7 @@ exports.signup = async (req, res) => {
         return admin.auth().setCustomUserClaims(userId, {
           user: true,
           admin: false
-        })
+        });
       })
       .then(() => {
         /// zwracanie pozytywnego responsa
@@ -187,7 +182,7 @@ exports.signup = async (req, res) => {
         } else {
           /// inny błąd
           return res.status(500).json({
-            general: 'Something went wrong, please try again'
+            general: "Something went wrong, please try again"
           });
         }
       });
@@ -268,7 +263,7 @@ exports.cofirmEmail = (req, res) => {
           .updateUser(doc.data()["userId"], {
             emailVerified: true
           })
-          .then(function (userRecord) {
+          .then(function(userRecord) {
             console.log("Successfully updated user", userRecord.toJSON());
             db.collection("Email-Verifications")
               .doc(id)
@@ -363,6 +358,8 @@ exports.uploadImage = (req, res) => {
 exports.addUserDetails = (req, res) => {
   let userDetails = {};
   if (!isEmpty(req.body.bio.trim())) userDetails.bio = req.body.bio;
+  if (!isEmpty(req.body.location.trim()))
+    userDetails.location = req.body.location;
 
   db.doc(`/users/${req.user.handle}`)
     .update(userDetails)
@@ -410,14 +407,18 @@ exports.getAuthenticatedUser = (req, res) => {
       data.forEach(doc => {
         userData.favourites.push(doc.data());
       });
-      return admin.auth().getUserByEmail(userData.credentials.email)
-
-    }).then(userRecord => {
+      return admin.auth().getUserByEmail(userData.credentials.email);
+    })
+    .then(userRecord => {
       userData.userPrivileges = userRecord.customClaims.user;
       userData.adminPrivileges = userRecord.customClaims.admin;
-      return db.collection('notifications').where('recipient', '==', req.user.handle).
-      orderBy('createdAt', 'desc').get();
-    }).then(data => {
+      return db
+        .collection("notifications")
+        .where("recipient", "==", req.user.handle)
+        .orderBy("createdAt", "desc")
+        .get();
+    })
+    .then(data => {
       userData.notifications = [];
       data.forEach(doc => {
         userData.notifications.push({
@@ -429,7 +430,7 @@ exports.getAuthenticatedUser = (req, res) => {
           read: doc.data().read,
           title: doc.data().title,
           notificationId: doc.id
-        })
+        });
       });
       return res.json(userData);
     })
@@ -452,11 +453,13 @@ exports.getUserByName = (req, res) => {
         });
       }
       userData.user = doc.data();
-      return db.collection('Posts').where('userHandle', '==', req.params.username)
-        .orderBy('createdAt', 'desc').get();
-
+      return db
+        .collection("Posts")
+        .where("userHandle", "==", req.params.username)
+        .orderBy("createdAt", "desc")
+        .get();
     })
-    .then((data) => {
+    .then(data => {
       userData.posts = [];
       data.forEach(doc => {
         userData.posts.push({
@@ -469,19 +472,18 @@ exports.getUserByName = (req, res) => {
           userHandle: doc.data().userHandle,
           createdAt: doc.data().createdAt,
           likeCount: doc.data().likeCount,
-          commentCount: doc.data().commentCount,
+          commentCount: doc.data().commentCount
           //userImage: doc.data().userImage
-        })
+        });
       });
-      return res.json(userData)
+      return res.json(userData);
     })
     .catch(err => {
       console.error(err);
       return res.status(500).json({
         error: err.code
       });
-    })
-
+    });
 };
 
 exports.markNotificationsRead = (req, res) => {
@@ -492,20 +494,19 @@ exports.markNotificationsRead = (req, res) => {
     batch.update(notification, {
       read: true
     });
-  })
+  });
 
-  batch.commit()
+  batch
+    .commit()
     .then(() => {
       return res.json({
         message: "Notifications marked read"
-      })
+      });
     })
     .catch(err => {
       console.error(err);
       return res.status(500).json({
         error: err.code
       });
-    })
-
-
-}
+    });
+};

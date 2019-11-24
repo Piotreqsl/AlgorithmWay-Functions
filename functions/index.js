@@ -5,11 +5,10 @@ const {
   admin
 } = require("./util/admin");
 
-/// Edit requests!
-/// Admin functions!
+/// Edit requests with approval!
 // On image change do post requests
 
-//Done: reputation, save posts
+//Done: reputation, save posts, admin fucntions
 
 
 const {
