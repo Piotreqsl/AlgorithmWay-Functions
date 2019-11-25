@@ -45,6 +45,7 @@ exports.postOnePost = (req, res) => {
     title: req.body.title,
     userHandle: req.user.handle,
     userImage: req.user.imageUrl,
+    contributors: [],
     likeCount: 0,
     commentCount: 0,
     verifed: false,
@@ -507,7 +508,7 @@ exports.deletePost = (req, res) => {
       }
       if (
         doc.data().userHandle !== req.user.handle ||
-        req.user.admin !== false
+        req.user.adminPrivileges !== false
       ) {
         return res.status(403).json({
           error: "Unauthorized"
@@ -546,6 +547,9 @@ exports.createEditRequest = (req, res) => {
     title: req.body.title,
     userHandle: req.user.handle,
     originalPostId: req.params.postId,
+    approved: false,
+    approvedBy: "none",
+
 
     image1: {},
     image2: {},
@@ -579,6 +583,7 @@ exports.createEditRequest = (req, res) => {
         error: "Post doesnt exist"
       });
     }
+    newAlgorithm.originalPosterHandle = doc.data().userHandle;
 
     return db.collection('edit-requests').add(newAlgorithm);
   }).then(doc => {
@@ -594,5 +599,132 @@ exports.createEditRequest = (req, res) => {
     console.error(err);
   });
 
+
+};
+
+exports.approveEditRequest = (req, res) => {
+  const editDoc = db.doc(`/edit-requests/${req.params.editPostId}`);
+  let postData;
+
+  let editDataFormatted;
+  let editData;
+  let id;
+
+
+  editDoc.get().then(doc => {
+
+      editDataFormatted = doc.data();
+      editData = doc.data();
+      id = doc.id;
+
+      // Checkowanie czy istnieje
+      if (!doc.exists) {
+        return res.status(404).json({
+          error: "Edit request not found"
+        });
+      }
+      const document = db.doc(`/Posts/${doc.data().originalPostId}`);
+
+      console.log("Pierwszy then niby")
+      return document.get();
+    })
+    .then(postDoc => {
+      postData = postDoc.data();
+
+
+      // Sprawdzanie czy już nie jest zatwierdzone
+      if (editData.approved) {
+        return res.status(400).json({
+          error: "Edit request already approved"
+        })
+      }
+
+      console.log("user handle z req " + req.user.handle);
+
+
+      if (req.user.handle === editData.originalPosterHandle) {
+        // Usuwanie zbędnych pól pomocniczych
+        console.log("if przeszedł then niby")
+
+
+        delete editDataFormatted.originalPostId;
+        delete editDataFormatted.originalPosterHandle;
+        delete editDataFormatted.approvedBy;
+        delete editDataFormatted.approved;
+        delete editDataFormatted.createdAt;
+        delete editDataFormatted.userHandle;
+
+
+        //editDataFormatted.contributors = [];
+        //editDataFormatted.contributors.concat(postData.contributors);
+        //editDataFormatted.contributors.push(editData.userHandle)
+
+
+        console.log("Sformatowany edit data to " + editData);
+
+        return db.doc(`/Posts/${editData.originalPostId}`).update(editDataFormatted)
+          .then(() => {
+            editData.approved = true;
+            editData.approvedBy = "owner";
+
+            return db.doc(`/edit-requests/${id}`).update(editData);
+          })
+          .then(() => {
+            return res.status(200).json({
+              success: "Succesfuly updated post"
+            });
+          })
+
+
+      }
+
+      if (req.user.admin) {
+        // Usuwanie zbędnych pól pomocniczych
+        console.log("if przeszedł then niby")
+
+
+        delete editDataFormatted.originalPostId;
+        delete editDataFormatted.originalPosterHandle;
+        delete editDataFormatted.approvedBy;
+        delete editDataFormatted.approved;
+        delete editDataFormatted.createdAt;
+        delete editDataFormatted.userHandle;
+
+
+        //editDataFormatted.contributors = [];
+        //editDataFormatted.contributors.concat(postData.contributors);
+        //editDataFormatted.contributors.push(editData.userHandle)
+
+
+        console.log("Sformatowany edit data to " + editData);
+
+        return db.doc(`/Posts/${editData.originalPostId}`).update(editDataFormatted)
+          .then(() => {
+            editData.approved = true;
+            editData.approvedBy = "admin";
+
+            return db.doc(`/edit-requests/${id}`).update(editData);
+          })
+          .then(() => {
+            return res.status(200).json({
+              success: "Succesfuly updated post"
+            });
+          })
+
+
+      } else {
+        return res.status(400).json({
+          error: "Permission denied"
+        })
+      }
+
+
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(400).json({
+        erorr: err.code
+      });
+    })
 
 }

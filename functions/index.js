@@ -5,10 +5,10 @@ const {
   admin
 } = require("./util/admin");
 
-/// Edit requests with approval!
-// On image change do post requests
 
-//Done: reputation, save posts, admin fucntions
+//Todo: Trigger on change editrequest: post contributors and approval by admin notification!
+
+//Done: reputation, save posts, admin fucntions, On image change do post requests, Edit requests with approval!
 
 const {
   verifyPost,
@@ -27,7 +27,8 @@ const {
   deletePost,
   addFav,
   removeFav,
-  createEditRequest
+  createEditRequest,
+  approveEditRequest
 } = require("./handlers/posts");
 
 const {
@@ -60,6 +61,7 @@ app.get("/post/:postId/unlike", FBEmailAuth, unlikePost);
 app.get("/post/:postId/addFav", FBAuth, addFav);
 app.get("/post/:postId/removeFav", FBAuth, removeFav);
 app.post("/post/:postId/createEditRequest", FBEmailAuth, createEditRequest);
+app.post("/post/:editPostId/approveEditRequest", FBEmailAuth, approveEditRequest);
 
 
 
@@ -126,6 +128,7 @@ exports.OnLike = functions
       });
   });
 
+
 exports.onUnlike = functions
   .region("europe-west1")
   .firestore.document("likes/{id}")
@@ -159,6 +162,43 @@ exports.onUnlike = functions
         console.error(err);
       });
   });
+
+
+exports.onEditRequestCreate = functions
+  .region('europe-west1')
+  .firestore
+  .document('edit-requests/{id}')
+  .onCreate(snapshot => {
+    return db
+      .doc(`/Posts/${snapshot.data().originalPostId}`)
+      .get()
+      .then(doc => {
+        if (
+          doc.exists &&
+          doc.data().userHandle !== snapshot.data().userHandle
+        ) {
+          return db
+            .doc(`/notifications/${snapshot.id}`)
+            .set({
+              createdAt: new Date().toISOString(),
+              recipient: doc.data().userHandle,
+              sender: snapshot.data().userHandle,
+              type: "edit-request",
+              read: false,
+              editPostId: snapshot.id,
+              postId: doc.id,
+              title: doc.data().title
+            })
+        }
+      })
+      .catch(err => {
+        console.error(err);
+      })
+  })
+
+
+
+
 
 exports.createNotificationOnComment = functions
   .region("europe-west1")

@@ -430,6 +430,10 @@ exports.getAuthenticatedUser = (req, res) => {
     .then(data => {
       userData.notifications = [];
       data.forEach(doc => {
+        if (typeof doc.data().editPostId !== 'undefined') userData.notifications.push({
+          editPostId: doc.data().editPostId
+        });
+
         userData.notifications.push({
           recipient: doc.data().recipient,
           sender: doc.data().sender,
