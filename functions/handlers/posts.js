@@ -585,6 +585,48 @@ exports.createEditRequest = (req, res) => {
     }
     newAlgorithm.originalPosterHandle = doc.data().userHandle;
 
+    let newAlgorithmFormatted = newAlgorithm;
+    delete newAlgorithmFormatted.approved;
+    delete newAlgorithmFormatted.approvedBy;
+    delete newAlgorithmFormatted.originalPostId;
+    delete newAlgorithmFormatted.originalPosterHandle;
+    delete newAlgorithmFormatted.userHandle;
+
+
+
+
+    /// Sprawdzenie czy edit przez autora lub admina
+    if (req.user.handle === doc.data().userHandle) {
+      return db.doc(`/Posts/${req.params.postId}`).update(newAlgorithmFormatted).then(() => {
+        return res.status(200).json({
+          success: "Edited immediately by owner"
+        })
+      })
+    }
+
+    if (req.user.admin) {
+      return db.doc(`/Posts/${req.params.postId}`).update(newAlgorithmFormatted).then(() => {
+        return db.collection("notifications").add({
+          createdAt: new Date().toISOString(),
+          postId: doc.id,
+          recipient: doc.data().userHandle,
+          sender: "AlgorithmWay admin",
+          read: false,
+          type: "edit-request-admin",
+          title: doc.data().title
+        }).then(() => {
+          return res.status(200).json({
+            success: "Edited immediately by admin"
+          })
+        })
+      })
+    }
+
+
+
+
+
+
     return db.collection('edit-requests').add(newAlgorithm);
   }).then(doc => {
     const resPost = newAlgorithm;
@@ -625,7 +667,7 @@ exports.approveEditRequest = (req, res) => {
       }
       const document = db.doc(`/Posts/${doc.data().originalPostId}`);
 
-      console.log("Pierwszy then niby")
+
       return document.get();
     })
     .then(postDoc => {
@@ -639,12 +681,12 @@ exports.approveEditRequest = (req, res) => {
         })
       }
 
-      console.log("user handle z req " + req.user.handle);
+
 
 
       if (req.user.handle === editData.originalPosterHandle) {
         // Usuwanie zbędnych pól pomocniczych
-        console.log("if przeszedł then niby")
+
 
 
         delete editDataFormatted.originalPostId;
@@ -660,7 +702,7 @@ exports.approveEditRequest = (req, res) => {
         //editDataFormatted.contributors.push(editData.userHandle)
 
 
-        console.log("Sformatowany edit data to " + editData);
+
 
         return db.doc(`/Posts/${editData.originalPostId}`).update(editDataFormatted)
           .then(() => {

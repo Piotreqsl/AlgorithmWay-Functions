@@ -5,10 +5,7 @@ const {
   admin
 } = require("./util/admin");
 
-
-//Todo: Trigger on change editrequest: post contributors and approval by admin notification!
-
-//Done: reputation, save posts, admin fucntions, On image change do post requests, Edit requests with approval!
+// Ew sprawdzic czy contributors działają
 
 const {
   verifyPost,
@@ -51,7 +48,6 @@ const app = require("express")();
 app.post("/admin/:postId/verify", adminAuth, verifyPost);
 app.post("/admin/add", adminAuth, addAdminPrivileges);
 
-
 /// Post routes
 app.get("/posts", getAllPosts);
 app.get("/posts/:postId", getPost);
@@ -61,15 +57,16 @@ app.get("/post/:postId/unlike", FBEmailAuth, unlikePost);
 app.get("/post/:postId/addFav", FBAuth, addFav);
 app.get("/post/:postId/removeFav", FBAuth, removeFav);
 app.post("/post/:postId/createEditRequest", FBEmailAuth, createEditRequest);
-app.post("/post/:editPostId/approveEditRequest", FBEmailAuth, approveEditRequest);
-
-
+app.post(
+  "/post/:editPostId/approveEditRequest",
+  FBEmailAuth,
+  approveEditRequest
+);
 
 app.post("/post/uploadImage", FBEmailAuth, uploadPostImage);
 app.post("/post/deleteImage/:filename", FBEmailAuth, deletePostImage);
 app.post("/posts/delete/:postId", FBEmailAuth, deletePost);
 app.post("/post/:postId/comment", FBAuth, commentOnPost);
-
 
 app.get("/user", FBAuth, getAuthenticatedUser);
 app.post("/user", FBAuth, addUserDetails);
@@ -79,7 +76,6 @@ app.post("/signup", signup);
 app.post("/login", login);
 app.post("/user/image", FBAuth, uploadImage);
 app.post("/notifications", FBAuth, markNotificationsRead);
-
 
 exports.api = functions.region("europe-west1").https.onRequest(app);
 
@@ -128,7 +124,6 @@ exports.OnLike = functions
       });
   });
 
-
 exports.onUnlike = functions
   .region("europe-west1")
   .firestore.document("likes/{id}")
@@ -163,11 +158,9 @@ exports.onUnlike = functions
       });
   });
 
-
 exports.onEditRequestCreate = functions
-  .region('europe-west1')
-  .firestore
-  .document('edit-requests/{id}')
+  .region("europe-west1")
+  .firestore.document("edit-requests/{id}")
   .onCreate(snapshot => {
     return db
       .doc(`/Posts/${snapshot.data().originalPostId}`)
@@ -177,28 +170,22 @@ exports.onEditRequestCreate = functions
           doc.exists &&
           doc.data().userHandle !== snapshot.data().userHandle
         ) {
-          return db
-            .doc(`/notifications/${snapshot.id}`)
-            .set({
-              createdAt: new Date().toISOString(),
-              recipient: doc.data().userHandle,
-              sender: snapshot.data().userHandle,
-              type: "edit-request",
-              read: false,
-              editPostId: snapshot.id,
-              postId: doc.id,
-              title: doc.data().title
-            })
+          return db.doc(`/notifications/${snapshot.id}`).set({
+            createdAt: new Date().toISOString(),
+            recipient: doc.data().userHandle,
+            sender: snapshot.data().userHandle,
+            type: "edit-request",
+            read: false,
+            editPostId: snapshot.id,
+            postId: doc.id,
+            title: doc.data().title
+          });
         }
       })
       .catch(err => {
         console.error(err);
-      })
-  })
-
-
-
-
+      });
+  });
 
 exports.createNotificationOnComment = functions
   .region("europe-west1")
@@ -269,6 +256,45 @@ exports.onUserImageChange = functions
     }
   });
 
+exports.onEditRequestApprove = functions
+  .region("europe-west1")
+  .firestore.document("/edit-requests/{id}")
+  .onUpdate(change => {
+
+
+    if (
+      change.before.data().approved !== change.after.data().approved &&
+      change.after.data().approvedBy === "admin"
+    ) {
+
+
+
+      return db.collection("notifications").add({
+        createdAt: new Date().toISOString(),
+        postId: change.after.data().originalPostId,
+        recipient: change.after.data().originalPosterHandle,
+        sender: "AlgorithmWay admin",
+        read: false,
+        type: "edit-request-admin",
+        title: change.after.data().title
+      }).then(() => {
+
+      }).catch(err => {
+        console.error(err);
+      })
+
+    }
+
+    if (
+      change.before.data().approved !== change.after.data().approved &&
+      change.after.data().approvedBy === "owner"
+    ) {
+      console.log("Updated by owner, nothing happens")
+    }
+
+
+  });
+
 exports.onPostDelete = functions
   .region("europe-west1")
   .firestore.document("/Posts/{postId}")
@@ -315,10 +341,11 @@ exports.onPostDelete = functions
           .collection("edit-requests")
           .where("originalPostId", "==", postId)
           .get();
-      }).then(data => {
+      })
+      .then(data => {
         data.forEach(doc => {
           batch.delete(db.doc(`/edit-requests/${doc.id}`));
-        })
+        });
         return batch.commit();
       })
       .catch(err => {
