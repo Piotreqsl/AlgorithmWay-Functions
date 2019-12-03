@@ -14,36 +14,40 @@ module.exports = (req, res, next) => {
     } else {
         console.error("No token found");
         return res.status(403).json({
-            error: "Unauthorized"
+            general: "Unauthorized"
         });
     }
 
-    admin
+    return admin
         .auth()
         .verifyIdToken(idToken)
         .then(decodedToken => {
             req.user = decodedToken;
             if (req.user.admin === false) {
+
+
                 return res.status(403).json({
-                    error: "Admin privileges required!"
+                    general: "Admin privileges required!"
                 });
-            };
 
-            console.log(decodedToken);
-            return db
-                .collection("users")
-                .where("userId", "==", req.user.uid)
-                .limit(1)
-                .get();
+            } else {
+                console.log(decodedToken);
+                return db
+                    .collection("users")
+                    .where("userId", "==", req.user.uid)
+                    .limit(1)
+                    .get().then(data => {
+                        console.log("czemu to sie robi")
+                        req.user.handle = data.docs[0].data().handle;
+                        req.user.imageUrl = data.docs[0].data().imageUrl;
+
+
+                        return next();
+
+                    })
+            }
         })
-        .then(data => {
-            req.user.handle = data.docs[0].data().handle;
-            req.user.imageUrl = data.docs[0].data().imageUrl;
 
-
-            return next();
-
-        })
         .catch(err => {
             console.error("Error while veryfying token", err);
             return res.status(403).json(err);

@@ -50,20 +50,25 @@ exports.addAdminPrivileges = (req, res) => {
 
     admin.auth().getUserByEmail(email).then((user) => {
 
-            if (user.admin === false) {
+            console.log(email);
+            console.log(user.admin);
+
+            if (user.customClaims.admin === false) {
+                console.log("nie ma ")
                 return admin.auth().setCustomUserClaims(user.uid, {
                         user: true,
                         admin: true
                     })
                     .then(() => {
                         return res.json({
-                            status: "User has admin privileges now"
+                            general: "User has admin privileges now"
                         })
                     })
 
             } else {
+                console.log("jest")
                 return res.status(400).json({
-                    error: "User is already an admin"
+                    general: "User is already an admin"
                 })
             }
 

@@ -367,8 +367,9 @@ exports.addUserDetails = (req, res) => {
   };
 
   let userDetails = {};
-  if (!isEmpty(req.body.bio.trim())) userDetails.bio = req.body.bio;
-  if (!isEmpty(req.body.location.trim())) userDetails.location = req.body.location;
+  if (!isEmpty(req.body.bio)) userDetails.bio = req.body.bio;
+  if (!isEmpty(req.body.location)) userDetails.location = req.body.location;
+
 
   db.doc(`/users/${req.user.handle}`)
     .update(userDetails)
@@ -385,6 +386,7 @@ exports.addUserDetails = (req, res) => {
     });
 };
 
+exports.reset
 // Wszystkie user data na zalogowanego
 exports.getAuthenticatedUser = (req, res) => {
   let userData = {};
