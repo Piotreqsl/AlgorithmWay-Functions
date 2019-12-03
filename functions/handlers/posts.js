@@ -22,7 +22,8 @@ exports.getAllPosts = (req, res) => {
           createdAt: doc.data().createdAt,
           likeCount: doc.data().likeCount,
           commentCount: doc.data().commentCount,
-          userImage: doc.data().userImage
+          userImage: doc.data().userImage,
+          verified: doc.data().verified
         });
       });
       return res.json(posts);
@@ -48,7 +49,7 @@ exports.postOnePost = (req, res) => {
     contributors: [],
     likeCount: 0,
     commentCount: 0,
-    verifed: false,
+    verified: false,
 
     image1: {},
     image2: {},
@@ -56,6 +57,8 @@ exports.postOnePost = (req, res) => {
 
     createdAt: new Date().toISOString()
   };
+
+  if (req.user.admin) newAlgorithm.verified = true;
 
   if (!isEmpty(req.body.java)) newAlgorithm.java = req.body.java;
   if (!isEmpty(req.body.cpp)) newAlgorithm.cpp = req.body.cpp;

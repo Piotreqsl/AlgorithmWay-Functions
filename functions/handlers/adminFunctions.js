@@ -16,20 +16,20 @@ exports.verifyPost = (req, res) => {
 
             postData = doc.data();
 
-            if (postData.verifed !== true) {
-                postData.verifed = true;
+            if (postData.verified !== true) {
+                postData.verified = true;
 
                 return db.doc(`/Posts/${req.params.postId}`).update({
-                        verifed: postData.verifed
+                        verified: postData.verified
                     })
                     .then(() => {
                         return res.status(200).json({
-                            message: "Verifed successfully"
+                            message: "Verified successfully"
                         })
                     })
             } else {
                 return res.status(400).json({
-                    error: "Post already verifed"
+                    error: "Post already verified"
                 })
             }
 

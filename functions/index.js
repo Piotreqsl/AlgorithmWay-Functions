@@ -36,7 +36,9 @@ const {
   getAuthenticatedUser,
   getUserByName,
   cofirmEmail,
-  markNotificationsRead
+  markNotificationsRead,
+  resetPassword,
+  getEditRequests
 } = require("./handlers/users");
 
 const FBAuth = require("./util/FBAuth");
@@ -68,6 +70,7 @@ app.post("/post/deleteImage/:filename", FBEmailAuth, deletePostImage);
 app.post("/posts/delete/:postId", FBEmailAuth, deletePost);
 app.post("/post/:postId/comment", FBAuth, commentOnPost);
 
+app.get("/getEditRequests", FBEmailAuth, getEditRequests)
 app.get("/user", FBAuth, getAuthenticatedUser);
 app.post("/user", FBAuth, addUserDetails);
 app.get("/users/:username", getUserByName);
@@ -76,6 +79,7 @@ app.post("/signup", signup);
 app.post("/login", login);
 app.post("/user/image", FBAuth, uploadImage);
 app.post("/notifications", FBAuth, markNotificationsRead);
+app.post("/passwordReset", resetPassword);
 
 exports.api = functions.region("europe-west1").https.onRequest(app);
 

@@ -47,6 +47,39 @@ function sendVerificationLink(email, link) {
   });
 }
 
+function sendPasswordResetLink(email, link) {
+
+  var smtpConfig = {
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // use SSL
+    auth: {
+      user: "algorithmwayonion@gmail.com",
+      pass: "onion12#"
+    }
+  };
+  var transporter = nodemailer.createTransport(smtpConfig);
+  var mailOptions = {
+    from: "algorithmwayonion@gmail.com", // sender address
+    to: email, // list of receivers
+    subject: "Password reset AlgorithmWay", // Subject line
+    text: "Password reset, press here to reset your password: " + link,
+    html: "<b>Hello there,<br> click <a href=" +
+      link +
+      "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
+  };
+  transporter.sendMail(mailOptions, function (error, response) {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Message sent: " + mailOptions.text);
+    }
+  });
+
+}
+
+
+
 exports.signup = async (req, res) => {
   ///Setowanie usera
   const newUser = {
@@ -386,7 +419,39 @@ exports.addUserDetails = (req, res) => {
     });
 };
 
-exports.reset
+exports.resetPassword = (req, res) => {
+
+
+  return db.collection('users').where('email', '==', req.body.body).get()
+    .then((querySnapshot) => {
+      if (querySnapshot.size === 0) {
+        console.log(req.body.body);
+        return res.status(404).json({
+          error: 'Email not found'
+        });
+      } else {
+        admin.auth().generatePasswordResetLink(req.body.body).then(link => {
+
+          sendPasswordResetLink(req.body.body, link);
+          return res.status(200).json({
+            success: "Password reset link has been sent to your email"
+          })
+
+
+        })
+
+
+
+      }
+
+
+
+
+
+    })
+
+
+}
 // Wszystkie user data na zalogowanego
 exports.getAuthenticatedUser = (req, res) => {
   let userData = {};
@@ -500,6 +565,46 @@ exports.getUserByName = (req, res) => {
       });
     });
 };
+
+exports.getEditRequests = (req, res) => {
+
+  if (req.user.admin) {
+    console.log("amind")
+
+    return db.collection('edit-requests').where("approved", "==", false).get().then(data => {
+      if (data.size === 0) {
+
+        return res.status(200).json({
+          error: "There are no pending requests"
+        })
+      } else {
+        let edits = []
+        data.forEach(doc => {
+          edits.push(doc.data());
+        })
+        return res.status(200).json(edits);
+      }
+    })
+  } else {
+
+    console.log("nibvy dalej")
+
+    return db.collection('edit-requests').where('originalPosterHandle', '==', req.user.handle).where('approved', '==', false).get()
+      .then(data => {
+        if (data.size === 0) {
+          return res.status(200).json({
+            error: "There are no pending edit requests for you"
+          })
+        } else {
+          let edits = []
+          data.forEach(doc => {
+            edits.push(doc.data());
+          })
+          return res.status(200).json(edits);
+        }
+      })
+  }
+}
 
 exports.markNotificationsRead = (req, res) => {
   let batch = db.batch();
