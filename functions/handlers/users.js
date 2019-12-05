@@ -407,9 +407,10 @@ exports.addUserDetails = (req, res) => {
   db.doc(`/users/${req.user.handle}`)
     .update(userDetails)
     .then(() => {
-      return res.json({
-        message: "Details added succesfully"
-      });
+      return db.doc(`/users/${req.user.handle}`).get().then(doc => {
+
+        return res.json(doc.data());
+      })
     })
     .catch(err => {
       console.error(err);
@@ -531,13 +532,15 @@ exports.getUserByName = (req, res) => {
         return res.status(404).json({
           error: "User not found"
         });
+
+      } else {
+        userData.user = doc.data();
+        return db
+          .collection("Posts")
+          .where("userHandle", "==", req.params.username)
+          .orderBy("createdAt", "desc")
+          .get();
       }
-      userData.user = doc.data();
-      return db
-        .collection("Posts")
-        .where("userHandle", "==", req.params.username)
-        .orderBy("createdAt", "desc")
-        .get();
     })
     .then(data => {
       userData.posts = [];
@@ -569,9 +572,8 @@ exports.getUserByName = (req, res) => {
 exports.getEditRequests = (req, res) => {
 
   if (req.user.admin) {
-    console.log("amind")
 
-    return db.collection('edit-requests').where("approved", "==", false).get().then(data => {
+    return db.collection('edit-requests').where("approved", "==", false).orderBy("createdAt", "desc").get().then(data => {
       if (data.size === 0) {
 
         return res.status(200).json({
@@ -580,16 +582,20 @@ exports.getEditRequests = (req, res) => {
       } else {
         let edits = []
         data.forEach(doc => {
-          edits.push(doc.data());
+          let object = {}
+          object = doc.data();
+          object.id = doc.id;
+
+          edits.push(object);
+
         })
         return res.status(200).json(edits);
       }
     })
   } else {
 
-    console.log("nibvy dalej")
 
-    return db.collection('edit-requests').where('originalPosterHandle', '==', req.user.handle).where('approved', '==', false).get()
+    return db.collection('edit-requests').where('originalPosterHandle', '==', req.user.handle).where('approved', '==', false).orderBy("createdAt", "desc").get()
       .then(data => {
         if (data.size === 0) {
           return res.status(200).json({
@@ -598,7 +604,11 @@ exports.getEditRequests = (req, res) => {
         } else {
           let edits = []
           data.forEach(doc => {
-            edits.push(doc.data());
+            let object = {}
+            object = doc.data();
+            object.id = doc.id;
+
+            edits.push(object);
           })
           return res.status(200).json(edits);
         }

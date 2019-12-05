@@ -23,7 +23,8 @@ exports.getAllPosts = (req, res) => {
           likeCount: doc.data().likeCount,
           commentCount: doc.data().commentCount,
           userImage: doc.data().userImage,
-          verified: doc.data().verified
+          verified: doc.data().verified,
+          categories: doc.data().categories
         });
       });
       return res.json(posts);
@@ -50,6 +51,8 @@ exports.postOnePost = (req, res) => {
     likeCount: 0,
     commentCount: 0,
     verified: false,
+    categories: [],
+
 
     image1: {},
     image2: {},
