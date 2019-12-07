@@ -1,7 +1,4 @@
-const {
-  db,
-  admin
-} = require("../util/admin");
+const { db, admin } = require("../util/admin");
 
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
@@ -34,11 +31,12 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification AlgorithmWay", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html: "<b>Hello there,<br> click <a href=" +
+    html:
+      "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function (error, response) {
+  transporter.sendMail(mailOptions, function(error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -48,7 +46,6 @@ function sendVerificationLink(email, link) {
 }
 
 function sendPasswordResetLink(email, link) {
-
   var smtpConfig = {
     host: "smtp.gmail.com",
     port: 465,
@@ -64,21 +61,19 @@ function sendPasswordResetLink(email, link) {
     to: email, // list of receivers
     subject: "Password reset AlgorithmWay", // Subject line
     text: "Password reset, press here to reset your password: " + link,
-    html: "<b>Hello there,<br> click <a href=" +
+    html:
+      "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function (error, response) {
+  transporter.sendMail(mailOptions, function(error, response) {
     if (error) {
       console.log(error);
     } else {
       console.log("Message sent: " + mailOptions.text);
     }
   });
-
 }
-
-
 
 exports.signup = async (req, res) => {
   ///Setowanie usera
@@ -96,7 +91,11 @@ exports.signup = async (req, res) => {
   };
 
   const isEmpty = string => {
-    if (string === null || typeof string === "undefined" || string.trim() === "") {
+    if (
+      string === null ||
+      typeof string === "undefined" ||
+      string.trim() === ""
+    ) {
       return true;
     } else {
       return false;
@@ -233,7 +232,11 @@ exports.login = (req, res) => {
   let errors = {};
 
   const isEmpty = string => {
-    if (string === null || typeof string === "undefined" || string.trim() === "") {
+    if (
+      string === null ||
+      typeof string === "undefined" ||
+      string.trim() === ""
+    ) {
       return true;
     } else {
       return false;
@@ -298,7 +301,7 @@ exports.cofirmEmail = (req, res) => {
           .updateUser(doc.data()["userId"], {
             emailVerified: true
           })
-          .then(function (userRecord) {
+          .then(function(userRecord) {
             console.log("Successfully updated user", userRecord.toJSON());
             db.collection("Email-Verifications")
               .doc(id)
@@ -392,7 +395,11 @@ exports.uploadImage = (req, res) => {
 
 exports.addUserDetails = (req, res) => {
   const isEmpty = string => {
-    if (string === null || typeof string === "undefined" || string.trim() === "") {
+    if (
+      string === null ||
+      typeof string === "undefined" ||
+      string.trim() === ""
+    ) {
       return true;
     } else {
       return false;
@@ -403,14 +410,15 @@ exports.addUserDetails = (req, res) => {
   if (!isEmpty(req.body.bio)) userDetails.bio = req.body.bio;
   if (!isEmpty(req.body.location)) userDetails.location = req.body.location;
 
-
   db.doc(`/users/${req.user.handle}`)
     .update(userDetails)
     .then(() => {
-      return db.doc(`/users/${req.user.handle}`).get().then(doc => {
-
-        return res.json(doc.data());
-      })
+      return db
+        .doc(`/users/${req.user.handle}`)
+        .get()
+        .then(doc => {
+          return res.json(doc.data());
+        });
     })
     .catch(err => {
       console.error(err);
@@ -421,38 +429,33 @@ exports.addUserDetails = (req, res) => {
 };
 
 exports.resetPassword = (req, res) => {
-
-
-  return db.collection('users').where('email', '==', req.body.body).get()
-    .then((querySnapshot) => {
+  return db
+    .collection("users")
+    .where("email", "==", req.body.body)
+    .get()
+    .then(querySnapshot => {
       if (querySnapshot.size === 0) {
         console.log(req.body.body);
         return res.status(404).json({
-          error: 'Email not found'
+          error: "Email not found"
         });
       } else {
-        admin.auth().generatePasswordResetLink(req.body.body).then(link => {
-
-          sendPasswordResetLink(req.body.body, link);
-          return res.status(200).json({
-            success: "Password reset link has been sent to your email"
-          })
-
-
-        })
-
-
-
+        admin
+          .auth()
+          .generatePasswordResetLink(req.body.body)
+          .then(link => {
+            sendPasswordResetLink(req.body.body, link);
+            return res.status(200).json({
+              success: "Password reset link has been sent to your email"
+            });
+          });
       }
-
-
-
-
-
     })
-
-
-}
+    .catch(err => {
+      console.log(err);
+      return res.status(400).json({ error: err.code });
+    });
+};
 // Wszystkie user data na zalogowanego
 exports.getAuthenticatedUser = (req, res) => {
   let userData = {};
@@ -498,9 +501,10 @@ exports.getAuthenticatedUser = (req, res) => {
     .then(data => {
       userData.notifications = [];
       data.forEach(doc => {
-        if (typeof doc.data().editPostId !== 'undefined') userData.notifications.push({
-          editPostId: doc.data().editPostId
-        });
+        if (typeof doc.data().editPostId !== "undefined")
+          userData.notifications.push({
+            editPostId: doc.data().editPostId
+          });
 
         userData.notifications.push({
           recipient: doc.data().recipient,
@@ -532,7 +536,6 @@ exports.getUserByName = (req, res) => {
         return res.status(404).json({
           error: "User not found"
         });
-
       } else {
         userData.user = doc.data();
         return db
@@ -570,51 +573,55 @@ exports.getUserByName = (req, res) => {
 };
 
 exports.getEditRequests = (req, res) => {
-
   if (req.user.admin) {
-
-    return db.collection('edit-requests').where("approved", "==", false).orderBy("createdAt", "desc").get().then(data => {
-      if (data.size === 0) {
-
-        return res.status(200).json({
-          error: "There are no pending requests"
-        })
-      } else {
-        let edits = []
-        data.forEach(doc => {
-          let object = {}
-          object = doc.data();
-          object.id = doc.id;
-
-          edits.push(object);
-
-        })
-        return res.status(200).json(edits);
-      }
-    })
-  } else {
-
-
-    return db.collection('edit-requests').where('originalPosterHandle', '==', req.user.handle).where('approved', '==', false).orderBy("createdAt", "desc").get()
+    return db
+      .collection("edit-requests")
+      .where("approved", "==", false)
+      .orderBy("createdAt", "desc")
+      .get()
       .then(data => {
         if (data.size === 0) {
           return res.status(200).json({
-            error: "There are no pending edit requests for you"
-          })
+            error: "There are no pending requests"
+          });
         } else {
-          let edits = []
+          let edits = [];
           data.forEach(doc => {
-            let object = {}
+            let object = {};
             object = doc.data();
             object.id = doc.id;
 
             edits.push(object);
-          })
+          });
           return res.status(200).json(edits);
         }
-      })
+      });
+  } else {
+    return db
+      .collection("edit-requests")
+      .where("originalPosterHandle", "==", req.user.handle)
+      .where("approved", "==", false)
+      .orderBy("createdAt", "desc")
+      .get()
+      .then(data => {
+        if (data.size === 0) {
+          return res.status(200).json({
+            error: "There are no pending edit requests for you"
+          });
+        } else {
+          let edits = [];
+          data.forEach(doc => {
+            let object = {};
+            object = doc.data();
+            object.id = doc.id;
+
+            edits.push(object);
+          });
+          return res.status(200).json(edits);
+        }
+      });
   }
-}
+};
 
 exports.markNotificationsRead = (req, res) => {
   let batch = db.batch();

@@ -25,7 +25,8 @@ const {
   addFav,
   removeFav,
   createEditRequest,
-  approveEditRequest
+  approveEditRequest,
+  getEditRequest
 } = require("./handlers/posts");
 
 const {
@@ -64,6 +65,7 @@ app.post(
   FBEmailAuth,
   approveEditRequest
 );
+app.get("/post/:editPostId/editRequest", FBEmailAuth, getEditRequest);
 
 app.post("/post/uploadImage", FBEmailAuth, uploadPostImage);
 app.post("/post/deleteImage/:filename", FBEmailAuth, deletePostImage);

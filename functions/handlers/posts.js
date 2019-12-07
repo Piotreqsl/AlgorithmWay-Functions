@@ -776,3 +776,59 @@ exports.approveEditRequest = (req, res) => {
     })
 
 }
+
+exports.getEditRequest = (req, res) => {
+  let editRequestData = {};
+  let postData = {};
+
+  let response = {};
+
+
+
+  db.doc(`/edit-requests/${req.params.editPostId}`).get().then(doc => {
+    if (!doc.exists) {
+      return res.status(404).json({
+        error: "Edit request not found"
+      });
+    } else {
+      if ((req.user.admin === true || req.user.handle === doc.data().userHandle) && doc.data().approved === false) {
+        editRequestData = doc.data();
+        editRequestData.id = doc.id;
+
+        response.editRequest = editRequestData;
+
+        return db.doc(`/Posts/${editRequestData.originalPostId}`).get().then(postDoc => {
+          if (!doc.exists) {
+            return res.status(404).json({
+              erorr: "Original post not found"
+            })
+          } else {
+            postData = postDoc.data();
+            response.originalPost = postData;
+
+            return res.json(response);
+
+
+          }
+        })
+
+      } else {
+        return res.status(400).json({
+          error: "You cant view this edit request"
+        });
+      }
+
+
+    }
+
+
+
+  })
+
+
+
+
+
+
+
+}
