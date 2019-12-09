@@ -418,6 +418,11 @@ exports.addUserDetails = (req, res) => {
         .get()
         .then(doc => {
           return res.json(doc.data());
+        })
+        .then(() => {
+          return res.json({
+            success: "User info changed successfully"
+          });
         });
     })
     .catch(err => {
