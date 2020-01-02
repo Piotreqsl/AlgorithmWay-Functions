@@ -1,15 +1,17 @@
-const {
-  db,
-  admin
-} = require("../util/admin");
+const { db, admin } = require("../util/admin");
 const config = require("../util/config");
 
 exports.getAllPosts = (req, res) => {
-  db.collection("Posts")
+  var first = db
+    .collection("Posts")
     .orderBy("createdAt", "desc")
+    .limit(15);
+
+  first
     .get()
     .then(data => {
       let posts = [];
+
       data.forEach(doc => {
         posts.push({
           postId: doc.id,
@@ -27,22 +29,99 @@ exports.getAllPosts = (req, res) => {
           categories: doc.data().categories
         });
       });
+
       return res.json(posts);
     })
     .catch(err => console.error(err));
 };
 
-exports.postOnePost = (req, res) => {
+exports.getAllPostsToAdmin = (req, res) => {
+  var first = db.collection("Posts").orderBy("createdAt", "desc");
 
+  first
+    .get()
+    .then(data => {
+      let posts = [];
+
+      data.forEach(doc => {
+        posts.push({
+          postId: doc.id,
+          title: doc.data().title,
+          shortDesc: doc.data().shortDesc,
+          java: doc.data().java,
+          cpp: doc.data().cpp,
+          python: doc.data().python,
+          userHandle: doc.data().userHandle,
+          createdAt: doc.data().createdAt,
+          likeCount: doc.data().likeCount,
+          commentCount: doc.data().commentCount,
+          userImage: doc.data().userImage,
+          verified: doc.data().verified,
+          categories: doc.data().categories
+        });
+      });
+
+      return res.json(posts);
+    })
+    .catch(err => console.error(err));
+};
+
+exports.getNextPosts = (req, res) => {
+  const lastDocument = db.doc(`/Posts/${req.params.postId}`);
+
+  lastDocument.get().then(doco => {
+    if (doco.exists) {
+      db.collection("Posts")
+        .orderBy("createdAt", "desc")
+        .startAfter(doco)
+        .limit(15)
+        .get()
+        .then(data => {
+          if (data.size === 0) {
+            return res.status(404).json({
+              message: "No more posts found"
+            });
+          } else {
+            let posts = [];
+
+            data.forEach(doc => {
+              posts.push({
+                postId: doc.id,
+                title: doc.data().title,
+                shortDesc: doc.data().shortDesc,
+                java: doc.data().java,
+                cpp: doc.data().cpp,
+                python: doc.data().python,
+                userHandle: doc.data().userHandle,
+                createdAt: doc.data().createdAt,
+                likeCount: doc.data().likeCount,
+                commentCount: doc.data().commentCount,
+                userImage: doc.data().userImage,
+                verified: doc.data().verified,
+                categories: doc.data().categories
+              });
+            });
+
+            return res.json(posts);
+          }
+        });
+    }
+  });
+};
+
+exports.postOnePost = (req, res) => {
   const isEmpty = string => {
-    if (string === null || typeof string === "undefined" || string.length === 0) {
+    if (
+      string === null ||
+      typeof string === "undefined" ||
+      string.length === 0
+    ) {
       return true;
     } else {
       return false;
     }
   };
   const newAlgorithm = {
-    desc: req.body.desc,
     shortDesc: req.body.shortDesc,
     title: req.body.title,
     userHandle: req.user.handle,
@@ -52,14 +131,12 @@ exports.postOnePost = (req, res) => {
     commentCount: 0,
     verified: false,
     categories: [],
-
-
-    image1: {},
-    image2: {},
-    image3: {},
-
+    images: [],
     createdAt: new Date().toISOString()
   };
+
+  if (!isEmpty(req.body.categories))
+    newAlgorithm.categories = req.body.categories;
 
   if (req.user.admin) newAlgorithm.verified = true;
 
@@ -67,16 +144,9 @@ exports.postOnePost = (req, res) => {
   if (!isEmpty(req.body.cpp)) newAlgorithm.cpp = req.body.cpp;
   if (!isEmpty(req.body.python)) newAlgorithm.python = req.body.python;
 
-  if (!isEmpty(req.body.url1)) newAlgorithm.image1.url = req.body.url1;
-  if (!isEmpty(req.body.filename1)) newAlgorithm.image1.filename = req.body.filename1;
+  if (!isEmpty(req.body.images)) newAlgorithm.images = req.body.images;
 
-  if (!isEmpty(req.body.url2)) newAlgorithm.image2.url = req.body.url2;
-  if (!isEmpty(req.body.filename2)) newAlgorithm.image2.filename = req.body.filename2;
-
-  if (!isEmpty(req.body.url3)) newAlgorithm.image3.url = req.body.url3;
-  if (!isEmpty(req.body.filename3)) newAlgorithm.image3.filename = req.body.filename3;
-
-
+  if (!isEmpty(req.body.desc)) newAlgorithm.desc = req.body.desc;
 
   db.collection("Posts")
     .add(newAlgorithm)
@@ -104,30 +174,30 @@ exports.getPost = (req, res) => {
         return res.status(404).json({
           error: "Post not found"
         });
+      } else {
+        postData = doc.data();
+        postData.postId = doc.id;
+        return db
+          .collection("comments")
+          .orderBy("createdAt", "desc")
+          .where("postId", "==", req.params.postId)
+          .get()
+          .then(data => {
+            postData.comments = [];
+            data.forEach(doc => {
+              postData.comments.push(doc.data());
+            });
+            postData.numberOfComments = postData.comments.length;
+            return res.json(postData);
+          })
+
+          .catch(err => {
+            console.error(err);
+            res.status(500).json({
+              error: err.code
+            });
+          });
       }
-      postData = doc.data();
-      postData.postId = doc.id;
-
-      return db
-        .collection("comments")
-        .orderBy("createdAt", "desc")
-        .where("postId", "==", req.params.postId)
-        .get();
-    })
-    .then(data => {
-      postData.comments = [];
-      data.forEach(doc => {
-        postData.comments.push(doc.data());
-      });
-
-      postData.numberOfCommnets = postData.comments.length;
-      return res.json(postData);
-    })
-    .catch(err => {
-      console.error(err);
-      res.status(500).json({
-        error: err.code
-      });
     });
 };
 
@@ -172,7 +242,7 @@ exports.uploadPostImage = (req, res) => {
   busboy.on("finish", () => {
     admin
       .storage()
-      .bucket()
+      .bucket(config.storageBucket)
       .upload(imageToBeUploaded.filepath, {
         resumable: false,
         metadata: {
@@ -201,13 +271,13 @@ exports.uploadPostImage = (req, res) => {
 exports.deletePostImage = (req, res) => {
   if (
     admin
-    .storage()
-    .bucket()
-    .file(req.params.filename).exists
+      .storage()
+      .bucket(config.storageBucket)
+      .file(req.params.filename).exists
   ) {
     admin
       .storage()
-      .bucket()
+      .bucket(config.storageBucket)
       .file(req.params.filename)
       .delete()
       .then(() => {
@@ -223,43 +293,44 @@ exports.deletePostImage = (req, res) => {
 };
 
 exports.commentOnPost = (req, res) => {
-  if (req.body.body.trim() === "")
+  if (req.body.body.trim() === "") {
     return res.status(400).json({
       comment: "Must not be empty"
     });
+  } else {
+    const newComment = {
+      body: req.body.body,
+      createdAt: new Date().toISOString(),
+      postId: req.params.postId,
+      userHandle: req.user.handle,
+      userImage: req.user.imageUrl
+    };
 
-  const newComment = {
-    body: req.body.body,
-    createdAt: new Date().toISOString(),
-    postId: req.params.postId,
-    userHandle: req.user.handle,
-    userImage: req.user.imageUrl
-  };
-
-  db.doc(`/Posts/${req.params.postId}`)
-    .get()
-    .then(doc => {
-      if (!doc.exists) {
-        return res.status(404).json({
-          error: "Post not found"
+    db.doc(`/Posts/${req.params.postId}`)
+      .get()
+      .then(doc => {
+        if (!doc.exists) {
+          return res.status(404).json({
+            error: "Post not found"
+          });
+        }
+        return doc.ref.update({
+          commentCount: doc.data().commentCount + 1
         });
-      }
-      return doc.ref.update({
-        commentCount: doc.data().commentCount + 1
+      })
+      .then(() => {
+        return db.collection("comments").add(newComment);
+      })
+      .then(() => {
+        res.json(newComment);
+      })
+      .catch(err => {
+        console.log(err);
+        res.status(500).json({
+          error: "Something went wrong"
+        });
       });
-    })
-    .then(() => {
-      return db.collection("comments").add(newComment);
-    })
-    .then(() => {
-      res.json(newComment);
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json({
-        error: "Something went wrong"
-      });
-    });
+  }
 };
 
 exports.addFav = (req, res) => {
@@ -297,11 +368,9 @@ exports.addFav = (req, res) => {
             return res.json(postData);
           });
       } else {
-        return res
-          .status(400)
-          .json({
-            error: "Post already added to favourites"
-          });
+        return res.status(400).json({
+          error: "Post already added to favourites"
+        });
       }
     })
     .catch(err => {
@@ -336,11 +405,9 @@ exports.removeFav = (req, res) => {
     })
     .then(data => {
       if (data.empty) {
-        return res
-          .status(404)
-          .json({
-            error: "Post is not added to favourites "
-          });
+        return res.status(404).json({
+          error: "Post is not added to favourites "
+        });
       } else {
         return db
           .doc(`/favourites/${data.docs[0].id}`)
@@ -386,38 +453,40 @@ exports.likePost = (req, res) => {
     })
     .then(data => {
       if (data.empty) {
-        return db
-          .collection("likes")
-          .add({
-            postId: req.params.postId,
-            userHandle: req.user.handle
-          })
-          .then(() => {
-            postData.likeCount++;
-            return postDocument.update({
-              likeCount: postData.likeCount
-            });
-          })
+        return (
+          db
+            .collection("likes")
+            .add({
+              postId: req.params.postId,
+              userHandle: req.user.handle
+            })
+            .then(() => {
+              postData.likeCount++;
+              return postDocument.update({
+                likeCount: postData.likeCount
+              });
+            })
 
-          // Tu można rep
-          //.then(() => {
-          // return db
-          //  .doc(`/users/${postData.userHandle}`)
-          //  .get()
-          // .then(userDoc => {
-          //   if (userDoc.exists) {
-          //    UserData = userDoc.data();
-          //   UserData.reputation++;
-          //    return db.doc(`/users/${postData.userHandle}`).update({
-          //     reputation: UserData.reputation
-          //    });
-          //  } else console.log("User not found, reputation remains");
-          //  });
-          //  })
+            // Tu można rep
+            //.then(() => {
+            // return db
+            //  .doc(`/users/${postData.userHandle}`)
+            //  .get()
+            // .then(userDoc => {
+            //   if (userDoc.exists) {
+            //    UserData = userDoc.data();
+            //   UserData.reputation++;
+            //    return db.doc(`/users/${postData.userHandle}`).update({
+            //     reputation: UserData.reputation
+            //    });
+            //  } else console.log("User not found, reputation remains");
+            //  });
+            //  })
 
-          .then(() => {
-            return res.json(postData);
-          });
+            .then(() => {
+              return res.json(postData);
+            })
+        );
       } else {
         return res.status(400).json({
           error: "Post already liked"
@@ -461,37 +530,37 @@ exports.unlikePost = (req, res) => {
           error: "Post not liked"
         });
       } else {
-        return db
-          .doc(`/likes/${data.docs[0].id}`)
-          .delete()
-          .then(() => {
-            postData.likeCount--;
-            return postDocument.update({
-              likeCount: postData.likeCount
-            });
-          })
+        return (
+          db
+            .doc(`/likes/${data.docs[0].id}`)
+            .delete()
+            .then(() => {
+              postData.likeCount--;
+              return postDocument.update({
+                likeCount: postData.likeCount
+              });
+            })
 
-          /// Tu można ew rep
-          // .then(() => {
-          // return db
-          // .doc(`/users/${postData.userHandle}`)
-          //.get()
-          //.then(userDoc => {
-          //if (userDoc.exists) {
-          //UserData = userDoc.data();
-          //UserData.reputation--;
-          //return db.doc(`/users/${postData.userHandle}`).update({
-          // reputation: UserData.reputation
-          //});
-          // } else console.log("User not found, reputation remains");
-          //});
-          //})
+            /// Tu można ew rep
+            // .then(() => {
+            // return db
+            // .doc(`/users/${postData.userHandle}`)
+            //.get()
+            //.then(userDoc => {
+            //if (userDoc.exists) {
+            //UserData = userDoc.data();
+            //UserData.reputation--;
+            //return db.doc(`/users/${postData.userHandle}`).update({
+            // reputation: UserData.reputation
+            //});
+            // } else console.log("User not found, reputation remains");
+            //});
+            //})
 
-          .then(() => {
-            res.json({
-              postData
-            });
-          });
+            .then(() => {
+              res.json(postData);
+            })
+        );
       }
     })
     .catch(err => {
@@ -513,7 +582,7 @@ exports.deletePost = (req, res) => {
         });
       }
       if (
-        doc.data().userHandle !== req.user.handle ||
+        doc.data().userHandle !== req.user.handle &&
         req.user.adminPrivileges !== false
       ) {
         return res.status(403).json({
@@ -537,15 +606,17 @@ exports.deletePost = (req, res) => {
 };
 
 exports.createEditRequest = (req, res) => {
-
   const isEmpty = string => {
-    if (string === null || typeof string === "undefined" || string.length === 0) {
+    if (
+      string === null ||
+      typeof string === "undefined" ||
+      string.length === 0
+    ) {
       return true;
     } else {
       return false;
     }
   };
-
 
   const newAlgorithm = {
     desc: req.body.desc,
@@ -555,12 +626,6 @@ exports.createEditRequest = (req, res) => {
     originalPostId: req.params.postId,
     approved: false,
     approvedBy: "none",
-
-
-    image1: {},
-    image2: {},
-    image3: {},
-
     createdAt: new Date().toISOString()
   };
 
@@ -568,86 +633,80 @@ exports.createEditRequest = (req, res) => {
   if (!isEmpty(req.body.cpp)) newAlgorithm.cpp = req.body.cpp;
   if (!isEmpty(req.body.python)) newAlgorithm.python = req.body.python;
 
-  if (!isEmpty(req.body.url1)) newAlgorithm.image1.url = req.body.url1;
-  if (!isEmpty(req.body.filename1)) newAlgorithm.image1.filename = req.body.filename1;
-
-  if (!isEmpty(req.body.url2)) newAlgorithm.image2.url = req.body.url2;
-  if (!isEmpty(req.body.filename2)) newAlgorithm.image2.filename = req.body.filename2;
-
-  if (!isEmpty(req.body.url3)) newAlgorithm.image3.url = req.body.url3;
-  if (!isEmpty(req.body.filename3)) newAlgorithm.image3.filename = req.body.filename3;
+  if (!isEmpty(req.body.images)) newAlgorithm.images = req.body.images;
 
   // Koniec getowania postów
 
-
   const originalPost = db.doc(`/Posts/${req.params.postId}`);
 
-  originalPost.get().then(doc => {
+  originalPost
+    .get()
+    .then(doc => {
+      if (!doc.exists) {
+        return res.status(404).json({
+          error: "Post doesnt exist"
+        });
+      }
+      newAlgorithm.originalPosterHandle = doc.data().userHandle;
 
-    if (!doc.exists) {
-      return res.status(404).json({
-        error: "Post doesnt exist"
+      let newAlgorithmFormatted = newAlgorithm;
+      delete newAlgorithmFormatted.approved;
+      delete newAlgorithmFormatted.approvedBy;
+      delete newAlgorithmFormatted.originalPostId;
+      delete newAlgorithmFormatted.originalPosterHandle;
+      delete newAlgorithmFormatted.userHandle;
+
+      /// Sprawdzenie czy edit przez autora lub admina
+      if (req.user.handle === doc.data().userHandle) {
+        return db
+          .doc(`/Posts/${req.params.postId}`)
+          .update(newAlgorithmFormatted)
+          .then(() => {
+            return res.status(200).json({
+              success: "Edited immediately by owner"
+            });
+          });
+      }
+
+      if (req.user.admin) {
+        return db
+          .doc(`/Posts/${req.params.postId}`)
+          .update(newAlgorithmFormatted)
+          .then(() => {
+            return db
+              .collection("notifications")
+              .add({
+                createdAt: new Date().toISOString(),
+                postId: doc.id,
+                recipient: doc.data().userHandle,
+                sender: "AlgorithmWay admin",
+                read: false,
+                type: "edit-request-admin",
+                title: doc.data().title
+              })
+              .then(() => {
+                return res.status(200).json({
+                  success: "Edited immediately by admin"
+                });
+              });
+          });
+      }
+
+      return db.collection("edit-requests").add(newAlgorithm);
+    })
+    .then(doc => {
+      const resPost = newAlgorithm;
+      resPost.postId = doc.id;
+      res.json({
+        resPost
       });
-    }
-    newAlgorithm.originalPosterHandle = doc.data().userHandle;
-
-    let newAlgorithmFormatted = newAlgorithm;
-    delete newAlgorithmFormatted.approved;
-    delete newAlgorithmFormatted.approvedBy;
-    delete newAlgorithmFormatted.originalPostId;
-    delete newAlgorithmFormatted.originalPosterHandle;
-    delete newAlgorithmFormatted.userHandle;
-
-
-
-
-    /// Sprawdzenie czy edit przez autora lub admina
-    if (req.user.handle === doc.data().userHandle) {
-      return db.doc(`/Posts/${req.params.postId}`).update(newAlgorithmFormatted).then(() => {
-        return res.status(200).json({
-          success: "Edited immediately by owner"
-        })
-      })
-    }
-
-    if (req.user.admin) {
-      return db.doc(`/Posts/${req.params.postId}`).update(newAlgorithmFormatted).then(() => {
-        return db.collection("notifications").add({
-          createdAt: new Date().toISOString(),
-          postId: doc.id,
-          recipient: doc.data().userHandle,
-          sender: "AlgorithmWay admin",
-          read: false,
-          type: "edit-request-admin",
-          title: doc.data().title
-        }).then(() => {
-          return res.status(200).json({
-            success: "Edited immediately by admin"
-          })
-        })
-      })
-    }
-
-
-
-
-
-
-    return db.collection('edit-requests').add(newAlgorithm);
-  }).then(doc => {
-    const resPost = newAlgorithm;
-    resPost.postId = doc.id;
-    res.json({
-      resPost
+    })
+    .catch(err => {
+      res.status(500).json({
+        error: "something went wrong"
+      });
+      console.error(err);
     });
-  }).catch(err => {
-    res.status(500).json({
-      error: "something went wrong"
-    });
-    console.error(err);
-  });
-
-
 };
 
 exports.approveEditRequest = (req, res) => {
@@ -658,9 +717,9 @@ exports.approveEditRequest = (req, res) => {
   let editData;
   let id;
 
-
-  editDoc.get().then(doc => {
-
+  editDoc
+    .get()
+    .then(doc => {
       editDataFormatted = doc.data();
       editData = doc.data();
       id = doc.id;
@@ -673,27 +732,20 @@ exports.approveEditRequest = (req, res) => {
       }
       const document = db.doc(`/Posts/${doc.data().originalPostId}`);
 
-
       return document.get();
     })
     .then(postDoc => {
       postData = postDoc.data();
 
-
       // Sprawdzanie czy już nie jest zatwierdzone
       if (editData.approved) {
         return res.status(400).json({
           error: "Edit request already approved"
-        })
+        });
       }
-
-
-
 
       if (req.user.handle === editData.originalPosterHandle) {
         // Usuwanie zbędnych pól pomocniczych
-
-
 
         delete editDataFormatted.originalPostId;
         delete editDataFormatted.originalPosterHandle;
@@ -702,15 +754,13 @@ exports.approveEditRequest = (req, res) => {
         delete editDataFormatted.createdAt;
         delete editDataFormatted.userHandle;
 
-
         //editDataFormatted.contributors = [];
         //editDataFormatted.contributors.concat(postData.contributors);
         //editDataFormatted.contributors.push(editData.userHandle)
 
-
-
-
-        return db.doc(`/Posts/${editData.originalPostId}`).update(editDataFormatted)
+        return db
+          .doc(`/Posts/${editData.originalPostId}`)
+          .update(editDataFormatted)
           .then(() => {
             editData.approved = true;
             editData.approvedBy = "owner";
@@ -721,15 +771,12 @@ exports.approveEditRequest = (req, res) => {
             return res.status(200).json({
               success: "Succesfuly updated post"
             });
-          })
-
-
+          });
       }
 
       if (req.user.admin) {
         // Usuwanie zbędnych pól pomocniczych
-        console.log("if przeszedł then niby")
-
+        console.log("if przeszedł then niby");
 
         delete editDataFormatted.originalPostId;
         delete editDataFormatted.originalPosterHandle;
@@ -738,15 +785,15 @@ exports.approveEditRequest = (req, res) => {
         delete editDataFormatted.createdAt;
         delete editDataFormatted.userHandle;
 
-
         //editDataFormatted.contributors = [];
         //editDataFormatted.contributors.concat(postData.contributors);
         //editDataFormatted.contributors.push(editData.userHandle)
 
-
         console.log("Sformatowany edit data to " + editData);
 
-        return db.doc(`/Posts/${editData.originalPostId}`).update(editDataFormatted)
+        return db
+          .doc(`/Posts/${editData.originalPostId}`)
+          .update(editDataFormatted)
           .then(() => {
             editData.approved = true;
             editData.approvedBy = "admin";
@@ -757,25 +804,20 @@ exports.approveEditRequest = (req, res) => {
             return res.status(200).json({
               success: "Succesfuly updated post"
             });
-          })
-
-
+          });
       } else {
         return res.status(400).json({
           error: "Permission denied"
-        })
+        });
       }
-
-
     })
     .catch(err => {
       console.error(err);
       return res.status(400).json({
         erorr: err.code
       });
-    })
-
-}
+    });
+};
 
 exports.getEditRequest = (req, res) => {
   let editRequestData = {};
@@ -783,52 +825,44 @@ exports.getEditRequest = (req, res) => {
 
   let response = {};
 
-
-
-  db.doc(`/edit-requests/${req.params.editPostId}`).get().then(doc => {
-    if (!doc.exists) {
-      return res.status(404).json({
-        error: "Edit request not found"
-      });
-    } else {
-      if ((req.user.admin === true || req.user.handle === doc.data().userHandle) && doc.data().approved === false) {
-        editRequestData = doc.data();
-        editRequestData.id = doc.id;
-
-        response.editRequest = editRequestData;
-
-        return db.doc(`/Posts/${editRequestData.originalPostId}`).get().then(postDoc => {
-          if (!doc.exists) {
-            return res.status(404).json({
-              erorr: "Original post not found"
-            })
-          } else {
-            postData = postDoc.data();
-            response.originalPost = postData;
-
-            return res.json(response);
-
-
-          }
-        })
-
-      } else {
-        return res.status(400).json({
-          error: "You cant view this edit request"
+  db.doc(`/edit-requests/${req.params.editPostId}`)
+    .get()
+    .then(doc => {
+      if (!doc.exists) {
+        return res.status(404).json({
+          error: "Edit request not found"
         });
+      } else {
+        if (
+          (req.user.admin === true ||
+            req.user.handle === doc.data().userHandle) &&
+          doc.data().approved === false
+        ) {
+          editRequestData = doc.data();
+          editRequestData.id = doc.id;
+
+          response.editRequest = editRequestData;
+
+          return db
+            .doc(`/Posts/${editRequestData.originalPostId}`)
+            .get()
+            .then(postDoc => {
+              if (!doc.exists) {
+                return res.status(404).json({
+                  erorr: "Original post not found"
+                });
+              } else {
+                postData = postDoc.data();
+                response.originalPost = postData;
+
+                return res.json(response);
+              }
+            });
+        } else {
+          return res.status(400).json({
+            error: "You cant view this edit request"
+          });
+        }
       }
-
-
-    }
-
-
-
-  })
-
-
-
-
-
-
-
-}
+    });
+};

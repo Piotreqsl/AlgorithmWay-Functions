@@ -1,5 +1,8 @@
 const functions = require("firebase-functions");
 
+
+// funckja like i dislike ma wyłączoną reputację jeszcze // 
+
 const {
   db,
   admin
@@ -26,7 +29,9 @@ const {
   removeFav,
   createEditRequest,
   approveEditRequest,
-  getEditRequest
+  getEditRequest,
+  getNextPosts,
+  getAllPostsToAdmin
 } = require("./handlers/posts");
 
 const {
@@ -53,7 +58,10 @@ app.post("/admin/add", adminAuth, addAdminPrivileges);
 
 /// Post routes
 app.get("/posts", getAllPosts);
+app.get("/posts/next/:postId", getNextPosts);
 app.get("/posts/:postId", getPost);
+app.get("/allPosts", getAllPostsToAdmin)
+
 app.post("/post", FBEmailAuth, postOnePost);
 app.get("/post/:postId/like", FBEmailAuth, likePost);
 app.get("/post/:postId/unlike", FBEmailAuth, unlikePost);
@@ -69,7 +77,7 @@ app.get("/post/:editPostId/editRequest", FBEmailAuth, getEditRequest);
 
 app.post("/post/uploadImage", FBEmailAuth, uploadPostImage);
 app.post("/post/deleteImage/:filename", FBEmailAuth, deletePostImage);
-app.post("/posts/delete/:postId", FBEmailAuth, deletePost);
+app.delete("/post/:postId", FBEmailAuth, deletePost);
 app.post("/post/:postId/comment", FBAuth, commentOnPost);
 
 app.get("/getEditRequests", FBEmailAuth, getEditRequests)
@@ -137,14 +145,12 @@ exports.onUnlike = functions
     return db
       .doc(`/notifications/${snapshot.id}`)
       .delete()
-
       .then(() => {
         return db
           .doc(`/Posts/${snapshot.data().postId}`)
           .get()
           .then(doc => {
             let posterData;
-
             return db
               .doc(`/users/${doc.data().userHandle}`)
               .get()
@@ -152,9 +158,12 @@ exports.onUnlike = functions
                 posterData = userDoc.data();
                 posterData.reputation--;
 
-                return db.doc(`/users/${doc.data().userHandle}`).update({
-                  reputation: posterData.reputation
-                });
+
+                if (doc.data().userHandle !== snapshot.data().userHandle) {
+                  return db.doc(`/users/${doc.data().userHandle}`).update({
+                    reputation: posterData.reputation
+                  });
+                }
               });
           });
       })

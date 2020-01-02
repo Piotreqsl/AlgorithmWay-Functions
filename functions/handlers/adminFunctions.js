@@ -52,18 +52,28 @@ exports.addAdminPrivileges = (req, res) => {
 
             console.log(email);
             console.log(user.admin);
+            console.log(user.emailVerified + " testt")
 
             if (user.customClaims.admin === false) {
-                console.log("nie ma ")
-                return admin.auth().setCustomUserClaims(user.uid, {
-                        user: true,
-                        admin: true
+                if (user.emailVerified === false) {
+                    console.log("niby ifik ")
+
+                    return res.status(400).json({
+                        general: "User must verify its mail!"
                     })
-                    .then(() => {
-                        return res.json({
-                            general: "User has admin privileges now"
+                } else {
+
+                    console.log("nie ma ")
+                    return admin.auth().setCustomUserClaims(user.uid, {
+                            user: true,
+                            admin: true
                         })
-                    })
+                        .then(() => {
+                            return res.json({
+                                general: "User has admin privileges now"
+                            })
+                        })
+                }
 
             } else {
                 console.log("jest")
