@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
@@ -31,12 +34,11 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification AlgorithmWay", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html:
-      "<b>Hello there,<br> click <a href=" +
+    html: "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function(error, response) {
+  transporter.sendMail(mailOptions, function (error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -61,12 +63,11 @@ function sendPasswordResetLink(email, link) {
     to: email, // list of receivers
     subject: "Password reset AlgorithmWay", // Subject line
     text: "Password reset, press here to reset your password: " + link,
-    html:
-      "<b>Hello there,<br> click <a href=" +
+    html: "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function(error, response) {
+  transporter.sendMail(mailOptions, function (error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -301,7 +302,7 @@ exports.cofirmEmail = (req, res) => {
           .updateUser(doc.data()["userId"], {
             emailVerified: true
           })
-          .then(function(userRecord) {
+          .then(function (userRecord) {
             console.log("Successfully updated user", userRecord.toJSON());
             db.collection("Email-Verifications")
               .doc(id)
@@ -458,7 +459,9 @@ exports.resetPassword = (req, res) => {
     })
     .catch(err => {
       console.log(err);
-      return res.status(400).json({ error: err.code });
+      return res.status(400).json({
+        error: err.code
+      });
     });
 };
 // Wszystkie user data na zalogowanego
@@ -563,8 +566,10 @@ exports.getUserByName = (req, res) => {
           userHandle: doc.data().userHandle,
           createdAt: doc.data().createdAt,
           likeCount: doc.data().likeCount,
-          commentCount: doc.data().commentCount
-          //userImage: doc.data().userImage
+          commentCount: doc.data().commentCount,
+          userImage: doc.data().userImage,
+          verified: doc.data().verified,
+          categories: doc.data().categories
         });
       });
       return res.json(userData);
@@ -595,10 +600,11 @@ exports.getEditRequests = (req, res) => {
             let object = {};
             object = doc.data();
             object.id = doc.id;
-
             edits.push(object);
-          });
+          })
           return res.status(200).json(edits);
+
+
         }
       });
   } else {
@@ -619,10 +625,10 @@ exports.getEditRequests = (req, res) => {
             let object = {};
             object = doc.data();
             object.id = doc.id;
-
             edits.push(object);
-          });
+          })
           return res.status(200).json(edits);
+
         }
       });
   }

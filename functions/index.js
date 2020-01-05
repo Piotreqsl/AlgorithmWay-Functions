@@ -31,7 +31,9 @@ const {
   approveEditRequest,
   getEditRequest,
   getNextPosts,
-  getAllPostsToAdmin
+  getAllPostsToAdmin,
+  deleteComment,
+  rejectEditRequest
 } = require("./handlers/posts");
 
 const {
@@ -60,8 +62,10 @@ app.post("/admin/add", adminAuth, addAdminPrivileges);
 app.get("/posts", getAllPosts);
 app.get("/posts/next/:postId", getNextPosts);
 app.get("/posts/:postId", getPost);
-app.get("/allPosts", getAllPostsToAdmin)
+app.get("/allPosts", getAllPostsToAdmin);
 
+
+app.post("/comment/:commentId/delete", FBEmailAuth, deleteComment);
 app.post("/post", FBEmailAuth, postOnePost);
 app.get("/post/:postId/like", FBEmailAuth, likePost);
 app.get("/post/:postId/unlike", FBEmailAuth, unlikePost);
@@ -73,6 +77,14 @@ app.post(
   FBEmailAuth,
   approveEditRequest
 );
+app.post(
+  "/post/:editPostId/rejectEditRequest",
+  FBEmailAuth,
+  rejectEditRequest
+);
+
+
+
 app.get("/post/:editPostId/editRequest", FBEmailAuth, getEditRequest);
 
 app.post("/post/uploadImage", FBEmailAuth, uploadPostImage);
@@ -309,6 +321,8 @@ exports.onEditRequestApprove = functions
 
 
   });
+
+
 
 exports.onPostDelete = functions
   .region("europe-west1")

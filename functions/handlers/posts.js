@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 const config = require("../util/config");
 
 exports.getAllPosts = (req, res) => {
@@ -185,7 +188,9 @@ exports.getPost = (req, res) => {
           .then(data => {
             postData.comments = [];
             data.forEach(doc => {
-              postData.comments.push(doc.data());
+              const comment = doc.data();
+              comment.id = doc.id;
+              postData.comments.push(comment);
             });
             postData.numberOfComments = postData.comments.length;
             return res.json(postData);
@@ -271,9 +276,9 @@ exports.uploadPostImage = (req, res) => {
 exports.deletePostImage = (req, res) => {
   if (
     admin
-      .storage()
-      .bucket(config.storageBucket)
-      .file(req.params.filename).exists
+    .storage()
+    .bucket(config.storageBucket)
+    .file(req.params.filename).exists
   ) {
     admin
       .storage()
@@ -319,11 +324,16 @@ exports.commentOnPost = (req, res) => {
         });
       })
       .then(() => {
-        return db.collection("comments").add(newComment);
+        return db
+          .collection("comments")
+          .add(newComment)
+          .then(document => {
+            const resComment = newComment;
+            resComment.id = document.id;
+            res.json(resComment);
+          });
       })
-      .then(() => {
-        res.json(newComment);
-      })
+
       .catch(err => {
         console.log(err);
         res.status(500).json({
@@ -455,37 +465,37 @@ exports.likePost = (req, res) => {
       if (data.empty) {
         return (
           db
-            .collection("likes")
-            .add({
-              postId: req.params.postId,
-              userHandle: req.user.handle
-            })
-            .then(() => {
-              postData.likeCount++;
-              return postDocument.update({
-                likeCount: postData.likeCount
-              });
-            })
+          .collection("likes")
+          .add({
+            postId: req.params.postId,
+            userHandle: req.user.handle
+          })
+          .then(() => {
+            postData.likeCount++;
+            return postDocument.update({
+              likeCount: postData.likeCount
+            });
+          })
 
-            // Tu można rep
-            //.then(() => {
-            // return db
-            //  .doc(`/users/${postData.userHandle}`)
-            //  .get()
-            // .then(userDoc => {
-            //   if (userDoc.exists) {
-            //    UserData = userDoc.data();
-            //   UserData.reputation++;
-            //    return db.doc(`/users/${postData.userHandle}`).update({
-            //     reputation: UserData.reputation
-            //    });
-            //  } else console.log("User not found, reputation remains");
-            //  });
-            //  })
+          // Tu można rep
+          //.then(() => {
+          // return db
+          //  .doc(`/users/${postData.userHandle}`)
+          //  .get()
+          // .then(userDoc => {
+          //   if (userDoc.exists) {
+          //    UserData = userDoc.data();
+          //   UserData.reputation++;
+          //    return db.doc(`/users/${postData.userHandle}`).update({
+          //     reputation: UserData.reputation
+          //    });
+          //  } else console.log("User not found, reputation remains");
+          //  });
+          //  })
 
-            .then(() => {
-              return res.json(postData);
-            })
+          .then(() => {
+            return res.json(postData);
+          })
         );
       } else {
         return res.status(400).json({
@@ -532,34 +542,34 @@ exports.unlikePost = (req, res) => {
       } else {
         return (
           db
-            .doc(`/likes/${data.docs[0].id}`)
-            .delete()
-            .then(() => {
-              postData.likeCount--;
-              return postDocument.update({
-                likeCount: postData.likeCount
-              });
-            })
+          .doc(`/likes/${data.docs[0].id}`)
+          .delete()
+          .then(() => {
+            postData.likeCount--;
+            return postDocument.update({
+              likeCount: postData.likeCount
+            });
+          })
 
-            /// Tu można ew rep
-            // .then(() => {
-            // return db
-            // .doc(`/users/${postData.userHandle}`)
-            //.get()
-            //.then(userDoc => {
-            //if (userDoc.exists) {
-            //UserData = userDoc.data();
-            //UserData.reputation--;
-            //return db.doc(`/users/${postData.userHandle}`).update({
-            // reputation: UserData.reputation
-            //});
-            // } else console.log("User not found, reputation remains");
-            //});
-            //})
+          /// Tu można ew rep
+          // .then(() => {
+          // return db
+          // .doc(`/users/${postData.userHandle}`)
+          //.get()
+          //.then(userDoc => {
+          //if (userDoc.exists) {
+          //UserData = userDoc.data();
+          //UserData.reputation--;
+          //return db.doc(`/users/${postData.userHandle}`).update({
+          // reputation: UserData.reputation
+          //});
+          // } else console.log("User not found, reputation remains");
+          //});
+          //})
 
-            .then(() => {
-              res.json(postData);
-            })
+          .then(() => {
+            res.json(postData);
+          })
         );
       }
     })
@@ -583,7 +593,7 @@ exports.deletePost = (req, res) => {
       }
       if (
         doc.data().userHandle !== req.user.handle &&
-        req.user.adminPrivileges !== false
+        req.user.adminPrivileges !== true
       ) {
         return res.status(403).json({
           error: "Unauthorized"
@@ -605,12 +615,56 @@ exports.deletePost = (req, res) => {
     });
 };
 
+exports.deleteComment = (req, res) => {
+  const document = db.doc(`/comments/${req.params.commentId}`);
+
+  document.get().then(doc => {
+    if (!doc.exists) {
+      return res.status(404).json({
+        error: "Comment not found"
+      });
+    } else {
+      if (
+        doc.data().userHandle !== req.user.handle &&
+        req.user.adminPrivileges !== true
+      ) {
+        return res.status(400).json({
+          erorr: "Unauthorized"
+        });
+      } else {
+        const postDoc = db.doc(`/Posts/${doc.data().postId}`);
+
+        return postDoc.get().then(postData => {
+          return postData.ref
+            .update({
+              commentCount: postData.data().commentCount - 1
+            })
+            .then(() => {
+              return document.delete().then(() => {
+                return res
+                  .json({
+                    message: "Post deleted successfully"
+                  })
+                  .catch(err => {
+                    return res.status(500).json({
+                      error: err.code
+                    });
+                  });
+              });
+            });
+        });
+      }
+    }
+  });
+};
+
 exports.createEditRequest = (req, res) => {
   const isEmpty = string => {
     if (
       string === null ||
       typeof string === "undefined" ||
-      string.length === 0
+      string.length === 0 ||
+      string === ""
     ) {
       return true;
     } else {
@@ -626,13 +680,28 @@ exports.createEditRequest = (req, res) => {
     originalPostId: req.params.postId,
     approved: false,
     approvedBy: "none",
-    createdAt: new Date().toISOString()
+    userImage: req.user.imageUrl,
+    categories: [],
+    images: [],
+    createdAt: new Date().toISOString(),
+    java: req.body.java,
+    python: req.body.python,
+    cpp: req.body.cpp
   };
 
-  if (!isEmpty(req.body.java)) newAlgorithm.java = req.body.java;
-  if (!isEmpty(req.body.cpp)) newAlgorithm.cpp = req.body.cpp;
-  if (!isEmpty(req.body.python)) newAlgorithm.python = req.body.python;
+  let newAlgorithmFormatted = {
+    desc: req.body.desc,
+    shortDesc: req.body.shortDesc,
+    title: req.body.title,
+    categories: [],
+    images: [],
+    java: req.body.java,
+    python: req.body.python,
+    cpp: req.body.cpp
+  };
 
+  if (!isEmpty(req.body.categories))
+    newAlgorithm.categories = req.body.categories;
   if (!isEmpty(req.body.images)) newAlgorithm.images = req.body.images;
 
   // Koniec getowania postów
@@ -648,13 +717,6 @@ exports.createEditRequest = (req, res) => {
         });
       }
       newAlgorithm.originalPosterHandle = doc.data().userHandle;
-
-      let newAlgorithmFormatted = newAlgorithm;
-      delete newAlgorithmFormatted.approved;
-      delete newAlgorithmFormatted.approvedBy;
-      delete newAlgorithmFormatted.originalPostId;
-      delete newAlgorithmFormatted.originalPosterHandle;
-      delete newAlgorithmFormatted.userHandle;
 
       /// Sprawdzenie czy edit przez autora lub admina
       if (req.user.handle === doc.data().userHandle) {
@@ -697,8 +759,8 @@ exports.createEditRequest = (req, res) => {
     .then(doc => {
       const resPost = newAlgorithm;
       resPost.postId = doc.id;
-      res.json({
-        resPost
+      res.status(200).json({
+        success: "Edit request created successfully"
       });
     })
     .catch(err => {
@@ -753,10 +815,11 @@ exports.approveEditRequest = (req, res) => {
         delete editDataFormatted.approved;
         delete editDataFormatted.createdAt;
         delete editDataFormatted.userHandle;
+        delete editDataFormatted.userImage;
 
-        //editDataFormatted.contributors = [];
-        //editDataFormatted.contributors.concat(postData.contributors);
-        //editDataFormatted.contributors.push(editData.userHandle)
+        editDataFormatted.contributors = [];
+        editDataFormatted.contributors.concat(postData.contributors);
+        editDataFormatted.contributors.concat(editData.userHandle);
 
         return db
           .doc(`/Posts/${editData.originalPostId}`)
@@ -772,9 +835,7 @@ exports.approveEditRequest = (req, res) => {
               success: "Succesfuly updated post"
             });
           });
-      }
-
-      if (req.user.admin) {
+      } else if (req.user.admin) {
         // Usuwanie zbędnych pól pomocniczych
         console.log("if przeszedł then niby");
 
@@ -784,10 +845,11 @@ exports.approveEditRequest = (req, res) => {
         delete editDataFormatted.approved;
         delete editDataFormatted.createdAt;
         delete editDataFormatted.userHandle;
+        delete editDataFormatted.userImage;
 
-        //editDataFormatted.contributors = [];
-        //editDataFormatted.contributors.concat(postData.contributors);
-        //editDataFormatted.contributors.push(editData.userHandle)
+        editDataFormatted.contributors = [];
+        editDataFormatted.contributors.concat(postData.contributors);
+        editDataFormatted.contributors.concat(editData.userHandle);
 
         console.log("Sformatowany edit data to " + editData);
 
@@ -819,6 +881,64 @@ exports.approveEditRequest = (req, res) => {
     });
 };
 
+exports.rejectEditRequest = (req, res) => {
+  const editDoc = db.doc(`/edit-requests/${req.params.editPostId}`);
+
+  editDoc.get().then(doc => {
+    if (!doc.exists) {
+      return res.status(404).json({
+        error: "Edit request not found"
+      })
+    } else {
+
+      let notification = {}
+
+      if (req.user.admin) {
+        notification = {
+          recipient: doc.data().userHandle,
+          type: "edit-req-reject",
+          createdAt: new Date().toISOString(),
+          title: doc.data().title,
+          sender: "AlgorithmWay admin",
+          read: false,
+          postId: doc.data().originalPostId
+        }
+      } else if (req.user.handle == doc.data().originalPosterHandle) {
+        notification = {
+          recipient: doc.data().userHandle,
+          type: "edit-req-reject",
+          createdAt: new Date().toISOString(),
+          title: doc.data().title,
+          sender: doc.data().originalPosterHandle,
+          read: false,
+          postId: doc.data().originalPostId
+        }
+      } else {
+        return res.status(400).json({
+          error: "You dont have rights to approve"
+        })
+      }
+
+      return db.collection("notifications").add(notification).then(() => {
+        return editDoc.delete().then(() => {
+          return res.status(200).json({
+            success: "Rejected successfully"
+          })
+        })
+      })
+
+    }
+
+
+
+  }).catch(err => {
+    console.error(err);
+    return res.status(400).json({
+      erorr: err.code
+    });
+  });
+}
+
 exports.getEditRequest = (req, res) => {
   let editRequestData = {};
   let postData = {};
@@ -835,7 +955,7 @@ exports.getEditRequest = (req, res) => {
       } else {
         if (
           (req.user.admin === true ||
-            req.user.handle === doc.data().userHandle) &&
+            req.user.handle === doc.data().originalPosterHandle) &&
           doc.data().approved === false
         ) {
           editRequestData = doc.data();
