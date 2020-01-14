@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
@@ -31,10 +34,9 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification CodeLimes", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html:
-    "<center> <img src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br> Click <a style='text-decoration: none, color: #6F6F8C' href=" + link +"> here </a> to verify your CodeLimes account! <br><br><br><br>  If you didn't create account on our website, please ignore this message.  </center> "
+    html: "<center> <img src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br> Click <a style='text-decoration: none, color: #6F6F8C' href=" + link + "> here </a> to verify your CodeLimes account! <br><br><br><br>  If you didn't create account on our website, please ignore this message.  </center> "
   };
-  transporter.sendMail(mailOptions, function(error, response) {
+  transporter.sendMail(mailOptions, function (error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -59,11 +61,10 @@ function sendPasswordResetLink(email, link) {
     to: email, // list of receivers
     subject: "Password reset CodeLimes", // Subject line
     text: "Password reset, press here to reset your password: " + link,
-    html:
-    "<center> <img src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br> Click <a style='text-decoration: none, color: #6F6F8C' href=" + link +"> here </a> to reset your password for CodeLimes account! <br><br><br><br>  If you didn't request a password change on our website, it can mean that someone was trying to break into your account.  </center> "
+    html: "<center> <img src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br> Click <a style='text-decoration: none, color: #6F6F8C' href=" + link + "> here </a> to reset your password for CodeLimes account! <br><br><br><br>  If you didn't request a password change on our website, it can mean that someone was trying to break into your account.  </center> "
     // html body
   };
-  transporter.sendMail(mailOptions, function(error, response) {
+  transporter.sendMail(mailOptions, function (error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -260,9 +261,21 @@ exports.login = (req, res) => {
     .then(data => {
       if (data.user.emailVerified) {
         return data.user.getIdToken().then(token => {
-          return res.json({
-            token
-          });
+
+          return admin.auth().verifyIdToken(token).then(claims => {
+            if (claims.user) {
+              return res.json({
+                token
+              });
+            } else {
+              return res.status(403).json({
+                general: "Your account is banned."
+              });
+            }
+
+          })
+
+
         });
       } else {
         return res.status(403).json({
@@ -304,7 +317,7 @@ exports.cofirmEmail = (req, res) => {
           .updateUser(doc.data()["userId"], {
             emailVerified: true
           })
-          .then(function(userRecord) {
+          .then(function (userRecord) {
             console.log("Successfully updated user", userRecord.toJSON());
             db.collection("Email-Verifications")
               .doc(id)
