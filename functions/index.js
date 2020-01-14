@@ -11,7 +11,8 @@ const {
 
 const {
   verifyPost,
-  addAdminPrivileges
+  addAdminPrivileges,
+  banUser
 } = require("./handlers/adminFunctions");
 
 const {
@@ -59,6 +60,7 @@ app.use(cors());
 
 app.post("/admin/:postId/verify", adminAuth, verifyPost);
 app.post("/admin/add", adminAuth, addAdminPrivileges);
+app.post("/admin/ban", adminAuth, banUser);
 
 /// Post routes
 app.get("/posts", getAllPosts);
