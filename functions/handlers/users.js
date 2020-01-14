@@ -1,7 +1,4 @@
-const {
-  db,
-  admin
-} = require("../util/admin");
+const { db, admin } = require("../util/admin");
 
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
@@ -34,11 +31,12 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification AlgorithmWay", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html: "<b>Hello there,<br> click <a href=" +
+    html:
+      "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function (error, response) {
+  transporter.sendMail(mailOptions, function(error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -63,11 +61,12 @@ function sendPasswordResetLink(email, link) {
     to: email, // list of receivers
     subject: "Password reset AlgorithmWay", // Subject line
     text: "Password reset, press here to reset your password: " + link,
-    html: "<b>Hello there,<br> click <a href=" +
+    html:
+      "<b>Hello there,<br> click <a href=" +
       link +
       "> here</a> to verify your AlghorithmWay account</b><br><br>If you didn't create account on our website, please ignore this message." // html body
   };
-  transporter.sendMail(mailOptions, function (error, response) {
+  transporter.sendMail(mailOptions, function(error, response) {
     if (error) {
       console.log(error);
     } else {
@@ -262,13 +261,19 @@ exports.login = (req, res) => {
     .auth()
     .signInWithEmailAndPassword(user.email, user.password)
     .then(data => {
-      return data.user.getIdToken();
+      if (data.user.emailVerified) {
+        return data.user.getIdToken().then(token => {
+          return res.json({
+            token
+          });
+        });
+      } else {
+        return res.status(403).json({
+          general: "You have to verify your email!"
+        });
+      }
     })
-    .then(token => {
-      return res.json({
-        token
-      });
-    })
+
     .catch(err => {
       console.error(err);
       if (
@@ -302,7 +307,7 @@ exports.cofirmEmail = (req, res) => {
           .updateUser(doc.data()["userId"], {
             emailVerified: true
           })
-          .then(function (userRecord) {
+          .then(function(userRecord) {
             console.log("Successfully updated user", userRecord.toJSON());
             db.collection("Email-Verifications")
               .doc(id)
@@ -485,11 +490,28 @@ exports.getAuthenticatedUser = (req, res) => {
       data.forEach(doc => {
         userData.likes.push(doc.data());
       });
+
+      return db
+        .collection("edit-requests")
+        .where("originalPosterHandle", "==", req.user.handle)
+        .where("approved", "==", false)
+        .get();
+    })
+    .then(data => {
+      userData.editRequests = [];
+      data.forEach(doc => {
+        let editRequestData = {};
+        editRequestData = doc.data();
+        editRequestData.id = doc.id;
+        userData.editRequests.push(editRequestData);
+      });
+
       return db
         .collection("favourites")
         .where("userHandle", "==", req.user.handle)
         .get();
     })
+
     .then(data => {
       userData.favourites = [];
       data.forEach(doc => {
@@ -504,16 +526,12 @@ exports.getAuthenticatedUser = (req, res) => {
         .collection("notifications")
         .where("recipient", "==", req.user.handle)
         .orderBy("createdAt", "desc")
+        .limit(10)
         .get();
     })
     .then(data => {
       userData.notifications = [];
       data.forEach(doc => {
-        if (typeof doc.data().editPostId !== "undefined")
-          userData.notifications.push({
-            editPostId: doc.data().editPostId
-          });
-
         userData.notifications.push({
           recipient: doc.data().recipient,
           sender: doc.data().sender,
@@ -545,34 +563,9 @@ exports.getUserByName = (req, res) => {
           error: "User not found"
         });
       } else {
-        userData.user = doc.data();
-        return db
-          .collection("Posts")
-          .where("userHandle", "==", req.params.username)
-          .orderBy("createdAt", "desc")
-          .get();
+        userData = doc.data();
+        return res.json(userData);
       }
-    })
-    .then(data => {
-      userData.posts = [];
-      data.forEach(doc => {
-        userData.posts.push({
-          postId: doc.id,
-          title: doc.data().title,
-          shortDesc: doc.data().shortDesc,
-          java: doc.data().java,
-          cpp: doc.data().cpp,
-          python: doc.data().python,
-          userHandle: doc.data().userHandle,
-          createdAt: doc.data().createdAt,
-          likeCount: doc.data().likeCount,
-          commentCount: doc.data().commentCount,
-          userImage: doc.data().userImage,
-          verified: doc.data().verified,
-          categories: doc.data().categories
-        });
-      });
-      return res.json(userData);
     })
     .catch(err => {
       console.error(err);
@@ -601,10 +594,8 @@ exports.getEditRequests = (req, res) => {
             object = doc.data();
             object.id = doc.id;
             edits.push(object);
-          })
+          });
           return res.status(200).json(edits);
-
-
         }
       });
   } else {
@@ -626,9 +617,8 @@ exports.getEditRequests = (req, res) => {
             object = doc.data();
             object.id = doc.id;
             edits.push(object);
-          })
+          });
           return res.status(200).json(edits);
-
         }
       });
   }

@@ -590,23 +590,28 @@ exports.deletePost = (req, res) => {
         return res.status(404).json({
           error: "Post not found"
         });
-      }
-      if (
-        doc.data().userHandle !== req.user.handle &&
-        req.user.adminPrivileges !== true
-      ) {
-        return res.status(403).json({
-          error: "Unauthorized"
-        });
       } else {
-        return document.delete();
+        if (
+          doc.data().userHandle === req.user.handle ||
+          req.user.admin === true
+        ) {
+
+          return document.delete().then(() => {
+            res.json({
+              message: "Post deleted successfully"
+            });
+          });
+
+
+
+        } else {
+          return res.status(403).json({
+            error: "Unauthorized"
+          });
+        }
       }
     })
-    .then(() => {
-      res.json({
-        message: "Post deleted successfully"
-      });
-    })
+
     .catch(err => {
       console.error(err);
       return res.status(500).json({
@@ -625,13 +630,10 @@ exports.deleteComment = (req, res) => {
       });
     } else {
       if (
-        doc.data().userHandle !== req.user.handle &&
-        req.user.adminPrivileges !== true
+        doc.data().userHandle === req.user.handle ||
+        req.user.admin === true
       ) {
-        return res.status(400).json({
-          erorr: "Unauthorized"
-        });
-      } else {
+
         const postDoc = db.doc(`/Posts/${doc.data().postId}`);
 
         return postDoc.get().then(postData => {
@@ -652,6 +654,10 @@ exports.deleteComment = (req, res) => {
                   });
               });
             });
+        });
+      } else {
+        return res.status(400).json({
+          erorr: "Unauthorized"
         });
       }
     }
@@ -700,9 +706,14 @@ exports.createEditRequest = (req, res) => {
     cpp: req.body.cpp
   };
 
-  if (!isEmpty(req.body.categories))
+  if (!isEmpty(req.body.categories)) {
     newAlgorithm.categories = req.body.categories;
-  if (!isEmpty(req.body.images)) newAlgorithm.images = req.body.images;
+    newAlgorithmFormatted.categories = req.body.categories;
+  }
+  if (!isEmpty(req.body.images)) {
+    newAlgorithm.images = req.body.images;
+    newAlgorithmFormatted.images = req.body.images;
+  }
 
   // Koniec getowania postów
 
@@ -884,60 +895,61 @@ exports.approveEditRequest = (req, res) => {
 exports.rejectEditRequest = (req, res) => {
   const editDoc = db.doc(`/edit-requests/${req.params.editPostId}`);
 
-  editDoc.get().then(doc => {
-    if (!doc.exists) {
-      return res.status(404).json({
-        error: "Edit request not found"
-      })
-    } else {
-
-      let notification = {}
-
-      if (req.user.admin) {
-        notification = {
-          recipient: doc.data().userHandle,
-          type: "edit-req-reject",
-          createdAt: new Date().toISOString(),
-          title: doc.data().title,
-          sender: "AlgorithmWay admin",
-          read: false,
-          postId: doc.data().originalPostId
-        }
-      } else if (req.user.handle == doc.data().originalPosterHandle) {
-        notification = {
-          recipient: doc.data().userHandle,
-          type: "edit-req-reject",
-          createdAt: new Date().toISOString(),
-          title: doc.data().title,
-          sender: doc.data().originalPosterHandle,
-          read: false,
-          postId: doc.data().originalPostId
-        }
+  editDoc
+    .get()
+    .then(doc => {
+      if (!doc.exists) {
+        return res.status(404).json({
+          error: "Edit request not found"
+        });
       } else {
-        return res.status(400).json({
-          error: "You dont have rights to approve"
-        })
+        let notification = {};
+
+        if (req.user.admin) {
+          notification = {
+            recipient: doc.data().userHandle,
+            type: "edit-req-reject",
+            createdAt: new Date().toISOString(),
+            title: doc.data().title,
+            sender: "AlgorithmWay admin",
+            read: false,
+            postId: doc.data().originalPostId
+          };
+        } else if (req.user.handle == doc.data().originalPosterHandle) {
+          notification = {
+            recipient: doc.data().userHandle,
+            type: "edit-req-reject",
+            createdAt: new Date().toISOString(),
+            title: doc.data().title,
+            sender: doc.data().originalPosterHandle,
+            read: false,
+            postId: doc.data().originalPostId
+          };
+        } else {
+          return res.status(400).json({
+            error: "You dont have rights to approve"
+          });
+        }
+
+        return db
+          .collection("notifications")
+          .add(notification)
+          .then(() => {
+            return editDoc.delete().then(() => {
+              return res.status(200).json({
+                success: "Rejected successfully"
+              });
+            });
+          });
       }
-
-      return db.collection("notifications").add(notification).then(() => {
-        return editDoc.delete().then(() => {
-          return res.status(200).json({
-            success: "Rejected successfully"
-          })
-        })
-      })
-
-    }
-
-
-
-  }).catch(err => {
-    console.error(err);
-    return res.status(400).json({
-      erorr: err.code
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(400).json({
+        erorr: err.code
+      });
     });
-  });
-}
+};
 
 exports.getEditRequest = (req, res) => {
   let editRequestData = {};

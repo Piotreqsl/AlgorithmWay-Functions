@@ -1,7 +1,6 @@
 const functions = require("firebase-functions");
 
-
-// funckja like i dislike ma wyłączoną reputację jeszcze // 
+// funckja like i dislike ma wyłączoną reputację jeszcze //
 
 const {
   db,
@@ -55,6 +54,9 @@ const FBEmailAuth = require("./util/FBEmailAuth");
 
 const app = require("express")();
 
+const cors = require("cors");
+app.use(cors());
+
 app.post("/admin/:postId/verify", adminAuth, verifyPost);
 app.post("/admin/add", adminAuth, addAdminPrivileges);
 
@@ -63,7 +65,6 @@ app.get("/posts", getAllPosts);
 app.get("/posts/next/:postId", getNextPosts);
 app.get("/posts/:postId", getPost);
 app.get("/allPosts", getAllPostsToAdmin);
-
 
 app.post("/comment/:commentId/delete", FBEmailAuth, deleteComment);
 app.post("/post", FBEmailAuth, postOnePost);
@@ -77,13 +78,7 @@ app.post(
   FBEmailAuth,
   approveEditRequest
 );
-app.post(
-  "/post/:editPostId/rejectEditRequest",
-  FBEmailAuth,
-  rejectEditRequest
-);
-
-
+app.post("/post/:editPostId/rejectEditRequest", FBEmailAuth, rejectEditRequest);
 
 app.get("/post/:editPostId/editRequest", FBEmailAuth, getEditRequest);
 
@@ -92,7 +87,7 @@ app.post("/post/deleteImage/:filename", FBEmailAuth, deletePostImage);
 app.delete("/post/:postId", FBEmailAuth, deletePost);
 app.post("/post/:postId/comment", FBAuth, commentOnPost);
 
-app.get("/getEditRequests", FBEmailAuth, getEditRequests)
+app.get("/getEditRequests", FBEmailAuth, getEditRequests);
 app.get("/user", FBAuth, getAuthenticatedUser);
 app.post("/user", FBAuth, addUserDetails);
 app.get("/users/:username", getUserByName);
@@ -117,31 +112,18 @@ exports.OnLike = functions
           doc.exists &&
           doc.data().userHandle !== snapshot.data().userHandle
         ) {
+          let posterData;
+
           return db
-            .doc(`/notifications/${snapshot.id}`)
-            .set({
-              createdAt: new Date().toISOString(),
-              recipient: doc.data().userHandle,
-              sender: snapshot.data().userHandle,
-              type: "like",
-              read: false,
-              postId: doc.id,
-              title: doc.data().title
-            })
-            .then(() => {
-              let posterData;
+            .doc(`/users/${doc.data().userHandle}`)
+            .get()
+            .then(userDoc => {
+              posterData = userDoc.data();
+              posterData.reputation++;
 
-              return db
-                .doc(`/users/${doc.data().userHandle}`)
-                .get()
-                .then(userDoc => {
-                  posterData = userDoc.data();
-                  posterData.reputation++;
-
-                  return db.doc(`/users/${doc.data().userHandle}`).update({
-                    reputation: posterData.reputation
-                  });
-                });
+              return db.doc(`/users/${doc.data().userHandle}`).update({
+                reputation: posterData.reputation
+              });
             });
         }
       })
@@ -169,7 +151,6 @@ exports.onUnlike = functions
               .then(userDoc => {
                 posterData = userDoc.data();
                 posterData.reputation--;
-
 
                 if (doc.data().userHandle !== snapshot.data().userHandle) {
                   return db.doc(`/users/${doc.data().userHandle}`).update({
@@ -287,42 +268,58 @@ exports.onEditRequestApprove = functions
   .region("europe-west1")
   .firestore.document("/edit-requests/{id}")
   .onUpdate(change => {
-
-
     if (
       change.before.data().approved !== change.after.data().approved &&
       change.after.data().approvedBy === "admin"
     ) {
-
-
-
-      return db.collection("notifications").add({
-        createdAt: new Date().toISOString(),
-        postId: change.after.data().originalPostId,
-        recipient: change.after.data().originalPosterHandle,
-        sender: "AlgorithmWay admin",
-        read: false,
-        type: "edit-request-admin",
-        title: change.after.data().title
-      }).then(() => {
-
-      }).catch(err => {
-        console.error(err);
-      })
-
+      return db
+        .collection("notifications")
+        .add({
+          createdAt: new Date().toISOString(),
+          postId: change.after.data().originalPostId,
+          recipient: change.after.data().originalPosterHandle,
+          sender: "AlgorithmWay admin",
+          read: false,
+          type: "edit-request-admin-to-owner",
+          title: change.after.data().title
+        })
+        .then(() => {
+          return db.collection("notifications").add({
+            createdAt: new Date().toISOString(),
+            postId: change.after.data().originalPostId,
+            recipient: change.after.data().userHandle,
+            sender: "AlgorithmWay admin",
+            read: false,
+            type: "edit-request-admin-to-sender",
+            title: change.after.data().title
+          });
+        })
+        .catch(err => {
+          console.error(err);
+        });
     }
 
     if (
       change.before.data().approved !== change.after.data().approved &&
       change.after.data().approvedBy === "owner"
     ) {
-      console.log("Updated by owner, nothing happens")
+      return db
+        .collection("notifications")
+        .add({
+          createdAt: new Date().toISOString(),
+          postId: change.after.data().originalPostId,
+          recipient: change.after.data().userHandle,
+          sender: change.after.data().originalPosterHandle,
+          read: false,
+          type: "edit-request-owner-to-sender",
+          title: change.after.data().title
+        })
+        .then(() => {})
+        .catch(err => {
+          console.error(err);
+        });
     }
-
-
   });
-
-
 
 exports.onPostDelete = functions
   .region("europe-west1")
