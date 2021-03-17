@@ -10,6 +10,8 @@ const crypto = require("crypto");
 const firebase = require("firebase");
 firebase.initializeApp(config);
 
+const hemail = 'onionauth@gmail.com';
+
 ///Encrypt user verification
 function md5(string) {
   return crypto
@@ -24,13 +26,13 @@ function sendVerificationLink(email, link) {
     port: 465,
     secure: true, // use SSL
     auth: {
-      user: "algorithmwayonion@gmail.com",
+      user: hemail,
       pass: "onion12#"
     }
   };
   var transporter = nodemailer.createTransport(smtpConfig);
   var mailOptions = {
-    from: "algorithmwayonion@gmail.com", // sender address
+    from: hemail, // sender address
     to: email, // list of receivers
     subject: "Email verification - CodeLimes", // Subject line
     text: "Email verification, press here to verify your email: " + link,
@@ -52,13 +54,13 @@ function sendPasswordResetLink(email, link) {
     port: 465,
     secure: true, // use SSL
     auth: {
-      user: "algorithmwayonion@gmail.com",
+      user: hemail,
       pass: "onion12#"
     }
   };
   var transporter = nodemailer.createTransport(smtpConfig);
   var mailOptions = {
-    from: "algorithmwayonion@gmail.com", // sender address
+    from: hemail, // sender address
     to: email, // list of receivers
     subject: "Password reset - CodeLimes", // Subject line
     text: "Password reset, press here to reset your password: " + link,
