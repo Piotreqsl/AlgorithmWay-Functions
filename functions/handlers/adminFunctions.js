@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 const config = require("../util/config");
 
 exports.verifyPost = (req, res) => {
@@ -99,3 +102,62 @@ exports.addAdminPrivileges = (req, res) => {
       }
     });
 };
+
+exports.banUser = (req, res) => {
+  const email = req.body.body;
+
+  admin
+    .auth()
+    .getUserByEmail(email)
+    .then(user => {
+
+      if (user.customClaims.user === true) {
+        if (user.customClaims.admin) {
+          return res.status(400).json({
+            general: "You cant ban admin"
+          });
+
+        } else {
+          console.log("nie ma bana ");
+          return admin
+            .auth()
+            .setCustomUserClaims(user.uid, {
+              user: false,
+              admin: false
+            })
+            .then(() => {
+              return res.json({
+                general: "User has been banned"
+              });
+            });
+        }
+
+
+
+
+      } else {
+        console.log("jest");
+        return res.status(400).json({
+          general: "User is already banned"
+        });
+      }
+    })
+
+    .catch(err => {
+      console.error(err);
+      if (
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/invalid-email"
+      ) {
+        return res.status(403).json({
+          general: "Wrong email, please try again"
+        });
+      } else {
+        return res.status(500).json({
+          error: err.code
+        });
+      }
+    });
+
+}

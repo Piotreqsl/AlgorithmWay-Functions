@@ -36,8 +36,7 @@ function sendVerificationLink(email, link) {
     to: email, // list of receivers
     subject: "Email verification - CodeLimes", // Subject line
     text: "Email verification, press here to verify your email: " + link,
-    html:
-    "<center> <img style='height: 70px' src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br>  <div style='font-size: 15px' >  Click <a style='text-decoration: none; color: #6F6F8C; font-weight: 700; ' href=" + link +"> here </a> to verify your CodeLimes account! </div> <br><br><br><br> <div style='font-size: 9px;'> If you didn't create account on our website, please ignore this message. </div>  </center> "
+    html: "<center> <img style='height: 35px' src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br>  <div style='font-size: 15px' >  Click <a style='text-decoration: none; color: #6F6F8C; font-weight: 700; ' href=" + link + "> here </a> to verify your CodeLimes account! </div> <br><br><br><br> <div style='font-size: 9px;'> If you didn't create account on our website, please ignore this message. </div>  </center> "
   };
   transporter.sendMail(mailOptions, function (error, response) {
     if (error) {
@@ -65,8 +64,8 @@ function sendPasswordResetLink(email, link) {
     subject: "Password reset - CodeLimes", // Subject line
     text: "Password reset, press here to reset your password: " + link,
     html:
-   
-    "<center> <img style='height: 70px' src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br>  <div style='font-size: 15px' >  Click <a style='text-decoration: none; color: #6F6F8C; font-weight: 700; ' href=" + link +"> here </a> to reset your password for CodeLimes account! </div> <br><br><br><br> <div style='font-size: 9px;'> If you didn't request a password change on our website, it can mean that someone was trying to break into your account. </div>  </center> "
+
+      "<center> <img style='height: 35px' src='https://firebasestorage.googleapis.com/v0/b/algorithmway-420.appspot.com/o/codelimes_logo_black.png?alt=media&token=9fffc339-541b-4d8f-998d-f92d25655119' /> <br><br>  <div style='font-size: 15px' >  Click <a style='text-decoration: none; color: #6F6F8C; font-weight: 700; ' href=" + link + "> here </a> to reset your password for CodeLimes account! </div> <br><br><br><br> <div style='font-size: 9px;'> If you didn't request a password change on our website, it can mean that someone was trying to break into your account. </div>  </center> "
     // html body
   };
   transporter.sendMail(mailOptions, function (error, response) {
