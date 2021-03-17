@@ -6,11 +6,25 @@ const {
 const config = require("../util/config");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-
+require('dotenv');
 const firebase = require("firebase");
 firebase.initializeApp(config);
 
+const passwordQ = 'skC1939zhpoog';
 const hemail = 'onionauth@gmail.com';
+
+
+const smtpConfig = {
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // use SSL
+  auth: {
+    user: hemail,
+    pass: passwordQ
+  }
+};
+
+const confirmMAILredirectLINK = "https://codelimes.live/login#success";
 
 ///Encrypt user verification
 function md5(string) {
@@ -21,15 +35,9 @@ function md5(string) {
 }
 
 function sendVerificationLink(email, link) {
-  var smtpConfig = {
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // use SSL
-    auth: {
-      user: hemail,
-      pass: "onion12#"
-    }
-  };
+  
+
+
   var transporter = nodemailer.createTransport(smtpConfig);
   var mailOptions = {
     from: hemail, // sender address
@@ -48,15 +56,7 @@ function sendVerificationLink(email, link) {
 }
 
 function sendPasswordResetLink(email, link) {
-  var smtpConfig = {
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // use SSL
-    auth: {
-      user: hemail,
-      pass: "onion12#"
-    }
-  };
+ 
   var transporter = nodemailer.createTransport(smtpConfig);
   var mailOptions = {
     from: hemail, // sender address
@@ -326,9 +326,7 @@ exports.cofirmEmail = (req, res) => {
             db.collection("Email-Verifications")
               .doc(id)
               .delete();
-            return res.status(200).json({
-              succes: "Sucessfully verified"
-            });
+            return res.redirect(confirmMAILredirectLINK)
           })
           .catch(err => {
             console.log("error ", err);
